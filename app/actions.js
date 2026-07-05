@@ -1,38 +1,44 @@
 "use server";
 
-import { isEditor } from "@/lib/session";
+import { auth } from "@clerk/nextjs/server";
 import {
+  getUser,
   upsertTimesheet,
   createWeek as dbCreateWeek,
   deleteWeek as dbDeleteWeek,
 } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 
-// Throw unless the visitor has unlocked editing with the password.
-// This is the REAL security boundary — the UI just hides buttons.
-async function requireEditor() {
-  if (!(await isEditor())) {
-    throw new Error("Not authorized");
-  }
+// Work out who's calling and whether they may touch `ownerId`'s sheets.
+// Employees may only touch their own; bosses may touch any employee's.
+// Returns the caller's DB user record (with role + name).
+async function authorizeFor(ownerId) {
+  const { userId } = await auth();
+  if (!userId) throw new Error("Not signed in");
+  const me = await getUser(userId);
+  if (!me) throw new Error("No access yet");
+  if (me.role === "boss") return me;
+  if (me.clerk_id === ownerId) return me;
+  throw new Error("Not authorized");
 }
 
-export async function saveTimesheet(weekStart, employee, rows) {
-  await requireEditor();
-  await upsertTimesheet(weekStart, employee, rows);
+export async function saveTimesheet(ownerId, ownerName, weekStart, employee, rows) {
+  await authorizeFor(ownerId);
+  await upsertTimesheet(ownerId, ownerName, weekStart, employee, rows);
   revalidatePath("/");
   return { ok: true };
 }
 
-export async function createWeekAction(weekStart) {
-  await requireEditor();
-  await dbCreateWeek(weekStart);
+export async function createWeekAction(ownerId, ownerName, weekStart) {
+  await authorizeFor(ownerId);
+  await dbCreateWeek(ownerId, ownerName, weekStart);
   revalidatePath("/");
   return { ok: true };
 }
 
-export async function deleteWeekAction(weekStart) {
-  await requireEditor();
-  await dbDeleteWeek(weekStart);
+export async function deleteWeekAction(ownerId, weekStart) {
+  await authorizeFor(ownerId);
+  await dbDeleteWeek(ownerId, weekStart);
   revalidatePath("/");
   return { ok: true };
 }

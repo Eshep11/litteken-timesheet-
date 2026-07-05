@@ -1,5 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
-import { getUser, getTimesheet } from "@/lib/db";
+import { getUser, getWeeks } from "@/lib/db";
 
 export async function GET(request) {
   const { userId } = await auth();
@@ -10,16 +10,12 @@ export async function GET(request) {
 
   const { searchParams } = new URL(request.url);
   const owner = searchParams.get("owner");
-  const week = searchParams.get("week");
-  if (!owner || !week) {
-    return Response.json({ error: "Missing owner or week" }, { status: 400 });
-  }
+  if (!owner) return Response.json({ error: "Missing owner" }, { status: 400 });
 
-  // Employees may only read their own sheets.
   if (me.role !== "boss" && me.clerk_id !== owner) {
     return Response.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const sheet = await getTimesheet(owner, week);
-  return Response.json(sheet || { week_start: week, employee: "", data: [] });
+  const weeks = await getWeeks(owner);
+  return Response.json({ weeks });
 }

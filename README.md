@@ -1,152 +1,161 @@
-# Litteken Plumbing — Time Sheets
+# Litteken Plumbing — Time Sheets (multi-user)
 
-A simple web app for weekly employee time sheets.
+A web app where your crew each keep their own weekly time sheets, and bosses
+can see and edit everyone's.
 
-- **Anyone** can open the site and view every timesheet (read-only).
-- **Only you** can unlock editing, with one password that only you know.
-- Everything is saved to a database, so you see the same sheets on your phone,
-  laptop, or anywhere else.
-- A **Download / Print** button turns any week into a PDF (Print → "Save as PDF").
+- Everyone signs in with their own account (email + password).
+- **Employees** see and edit only their own weekly sheets.
+- **Bosses** see and edit everyone's sheets and can tell whose is whose.
+- Two sign-up codes control who can join: an **employee code** and a
+  **boss code**. You hand out whichever is right for each person.
+- Any week can be printed / saved as a PDF (Print → "Save as PDF").
 
-Built with Next.js and Neon Postgres. No Google account or OAuth setup needed.
-Runs free.
-
----
-
-## How the login works
-
-There are no user accounts. You set one secret **edit password**. On the site
-you click **Unlock editing**, type the password once, and editing turns on (it
-stays unlocked on that device for about 30 days via a secure cookie). Everyone
-else just sees the sheets — no password, no login, view only.
-
-That's the whole auth system. To "log out," click **Lock editing**.
+Built with Next.js, Clerk (sign-in), and Neon Postgres. Runs free.
 
 ---
 
-## What you'll set up (about 15–20 min, one time)
+## How accounts work
 
-1. A **Neon** database — where the timesheets live.
-2. **Vercel** — hosts the website and connects to Neon.
-3. Two settings: your **edit password** and a random **secret**.
+There's no Google setup. People sign up with an email and password. Right
+after signing up, they enter their **name** and an **access code**:
 
-You can test it on your own computer first (Part A) or go straight online
-(Part B). Local testing is optional.
+- Enter the **employee code** → they become an employee.
+- Enter the **boss code** → they become a boss.
 
----
+Without a valid code they can't see anything, so the code is what actually lets
+someone in. You set both codes (and can change them anytime) in Vercel.
 
-## Part A — Run it on your computer first (optional)
-
-You need **Node.js** installed. Easiest way on a Mac: download the **LTS**
-installer from https://nodejs.org, open the `.pkg`, click through, then quit
-and reopen Terminal.
-
-1. In this project folder:
-   ```
-   npm install
-   ```
-2. Make your local settings file:
-   ```
-   cp .env.local.example .env.local
-   ```
-   (On Windows, just copy `.env.local.example` and rename the copy to
-   `.env.local`.)
-3. Fill in `.env.local`:
-   - `EDIT_PASSWORD` — any password you'll remember.
-   - `AUTH_SECRET` — any long random string.
-   - `DATABASE_URL` — from Neon (Step 1 below).
-4. Start it:
-   ```
-   npm run dev
-   ```
-   Open http://localhost:3000
+You'll set up three free accounts: **Clerk** (sign-in), **Neon** (database),
+and **Vercel** (hosting). About 30 minutes total.
 
 ---
 
-## Step 1 — Database (Neon Postgres)
+## Step 1 — Clerk (sign-in)
 
-Easiest is to add Neon from inside Vercel (Step 2) — it wires the connection in
-automatically. To do it directly instead:
+1. Go to **https://clerk.com** → sign up (free).
+2. Click **Create application**. Give it a name (e.g. "Litteken Timesheet").
+3. For sign-in options, make sure **Email** and **Password** are turned on.
+   You can leave the rest off. Click **Create application**.
+4. You'll land on the **API keys** page. You need two values (they start with
+   `pk_test_` and `sk_test_`). Keep this tab open — you'll paste them into
+   Vercel in Step 3:
+   - **Publishable key** → `pk_test_...`
+   - **Secret key** → `sk_test_...`
+
+That's it for Clerk. These are development keys, which work on your Vercel web
+address. (A small "development" badge shows on the login box, and there's a
+~100-account limit — both fine for your team. A cleaner setup with no badge
+needs a custom domain, which you can add later; see the end of this file.)
+
+---
+
+## Step 2 — Database (Neon)
+
+Easiest is to add Neon from inside Vercel (Step 3). To do it directly instead:
 
 1. Go to **https://neon.tech** → sign up (free, no credit card).
-2. **Create a project** (any name, any region near you).
-3. Copy the **Connection string** shown on the dashboard. It looks like
-   `postgresql://user:pass@ep-xxxx.neon.tech/dbname?sslmode=require`.
-4. Use it as `DATABASE_URL`.
+2. **Create a project**.
+3. Copy the **Connection string** (looks like
+   `postgresql://user:pass@ep-xxxx.neon.tech/dbname?sslmode=require`).
 
-The app creates its own table automatically the first time it runs — no SQL to
-write.
+The app builds its own tables automatically — no SQL to write.
 
 ---
 
-## Step 2 — Put it online (Vercel)
+## Step 3 — Vercel (hosting + settings)
 
-1. Create a free **GitHub** account (https://github.com) and push this project
-   to a new repository. If you're not a command-line person, the GitHub Desktop
-   app is the easiest way: https://desktop.github.com
+1. Push this project to a new **GitHub** repository (the GitHub Desktop app is
+   the easiest way: https://desktop.github.com).
 2. Go to **https://vercel.com** → sign up with GitHub.
-3. **Add New… → Project** → import your repository. Vercel auto-detects
-   Next.js; leave the build settings as-is.
-4. **Add the database:** your Vercel project → **Storage** tab → **Create
-   Database → Neon** → follow the prompts. This sets `DATABASE_URL` for you
-   automatically. (Skip Step 1 if you do this.)
-5. **Add your two settings:** project → **Settings → Environment Variables**.
-   Add:
-   - `EDIT_PASSWORD` — the password you'll type to edit.
-   - `AUTH_SECRET` — any long random string. Generate one by running
-     `npx auth secret` in the project folder, or grab one from
-     https://generate-secret.vercel.app
-6. **Deploy** (or **Redeploy** if you added the variables after the first
-   deploy — variables only take effect on a fresh deploy).
-7. Vercel gives you a URL like `https://litteken-timesheet.vercel.app`. That's
-   your site. Share it with anyone who needs to view.
+3. **Add New… → Project** → import your repository. Leave build settings as-is.
+4. **Add the database:** project → **Storage** tab → **Create Database → Neon**
+   → follow the prompts. This sets `DATABASE_URL` for you automatically.
+   (Skip Step 2 if you do this.)
+5. **Add all the settings:** project → **Settings → Environment Variables**.
+   Add each of these (name on the left, value on the right):
 
-Done. Open the site, click **Unlock editing**, type your password, and edit.
+   | Name | Value |
+   |------|-------|
+   | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | your `pk_test_...` from Clerk |
+   | `CLERK_SECRET_KEY` | your `sk_test_...` from Clerk |
+   | `NEXT_PUBLIC_CLERK_SIGN_IN_URL` | `/sign-in` |
+   | `NEXT_PUBLIC_CLERK_SIGN_UP_URL` | `/sign-up` |
+   | `NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL` | `/` |
+   | `NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL` | `/` |
+   | `EMPLOYEE_CODE` | any code you make up (give to employees) |
+   | `BOSS_CODE` | a different code you make up (give to bosses) |
+   | `DATABASE_URL` | (already set if you did step 4) |
+
+6. Go to **Deployments** → the top one → **⋯** → **Redeploy**. (Settings only
+   take effect on a fresh deploy.)
+7. Vercel gives you a URL like `https://litteken-timesheet.vercel.app`. Share it
+   with your crew.
 
 ---
 
 ## Using it
 
-- **Time sheets** list on the left (scrolls). Newest week on top. Tap one to
-  view it.
-- **Unlock editing** (top right) — type your password once to turn on editing.
-- **+ New** — start a timesheet for a week. Type any date in that week; it snaps
-  to that week automatically.
-- Fill in the grid. **Save** writes it to the database. A yellow "Unsaved
-  changes" tag reminds you when something isn't saved yet.
-- **+ 5 rows** adds more lines if a week is busy.
-- **Download / Print** — opens your browser's print dialog. Choose
-  "Save as PDF" for a file, or print it.
-- **Delete week** removes that week's sheet.
-- **Lock editing** turns editing back off on that device.
+**First time, each person:**
+1. Open the site → **Sign up** → enter email + password.
+2. On the next screen, enter your **name** and your **access code** (employee
+   or boss code, whichever you were given).
 
-Viewers (no password) see everything read-only and can Download / Print any
-week.
+**Employees:** your weeks are listed on the left (newest first). **+ New**
+starts a week, fill in the grid, **Save**. **Download / Print** makes a PDF.
+
+**Bosses:** a **"Viewing employee"** dropdown at the top lets you pick any
+employee and see/edit their sheets, with their name shown. Everything else
+works the same.
+
+---
+
+## Managing your team
+
+**Change a code:** update `EMPLOYEE_CODE` or `BOSS_CODE` in Vercel → Settings →
+Environment Variables, then Redeploy. (People already signed in stay in; the new
+code only affects new sign-ups.)
+
+**Change someone's role, or reset their access:** open your database and edit
+the `users` table. In Vercel → **Storage** → open your Neon database → **SQL
+Editor**, then run one of these (replace the email):
+
+- See everyone: `SELECT name, email, role FROM users;`
+- Make someone a boss: `UPDATE users SET role='boss' WHERE email='them@example.com';`
+- Make someone an employee: `UPDATE users SET role='employee' WHERE email='them@example.com';`
+- Reset a person (they'll re-enter a code next time):
+  `DELETE FROM users WHERE email='them@example.com';`
+
+**Remove someone entirely:** delete their account in the Clerk dashboard
+(Users list), and delete their row from the `users` table as above.
 
 ---
 
 ## Costs
 
-Free on Vercel + Neon's free tiers for this kind of low-traffic tool.
+Free on Clerk (up to 50,000 users), Neon, and Vercel free tiers. Note: Vercel's
+free Hobby plan is meant for non-commercial use — for a small internal tool this
+is a common gray area; Cloudflare Pages or Netlify free tiers allow commercial
+use if you want to be strict.
 
-One note: Vercel's free **Hobby** plan is officially intended for
-non-commercial use. For a small internal tool this is a common gray area. If
-you want to be strict, upgrade to Vercel Pro (~$20/mo) or host on Cloudflare
-Pages or Netlify (their free tiers allow commercial use). The code runs the
-same on all of them.
+---
+
+## Optional: a cleaner setup with your own domain (later)
+
+If you buy a domain (e.g. from Namecheap) and want to drop the "development"
+badge and the 100-account limit, you can create a Clerk **production instance**
+and point the domain at Vercel. Clerk's guide walks through it:
+https://clerk.com/docs/guides/development/deployment/production
+This is optional — the app works fully without it.
 
 ---
 
 ## Common gotchas
 
-- **Password won't unlock:** confirm `EDIT_PASSWORD` is set in Vercel's
-  Environment Variables and you **Redeployed** after adding it. Passwords are
-  case-sensitive.
-- **Unlocks but "Save failed":** usually the cookie/secret. Make sure
-  `AUTH_SECRET` is set. Try locking and unlocking again.
-- **Database errors:** check `DATABASE_URL` is set and correct in Vercel, then
-  Redeploy.
+- **Blank or error after signing in:** you land on the "enter access code"
+  screen — that's expected the first time. Enter your name + code.
+- **"That access code isn't valid":** check `EMPLOYEE_CODE` / `BOSS_CODE` in
+  Vercel and that you Redeployed after setting them. Codes are case-sensitive.
+- **Can't sign in at all / Clerk errors:** double-check both Clerk keys are set
+  in Vercel and you Redeployed.
+- **Database errors:** confirm `DATABASE_URL` is set, then Redeploy.
 - **Changed any setting?** You must **Redeploy** for it to take effect.
-- **Want to change the password later:** update `EDIT_PASSWORD` in Vercel and
-  Redeploy. (Anyone currently unlocked stays unlocked until their cookie
-  expires; to force everyone out, also change `AUTH_SECRET`.)
