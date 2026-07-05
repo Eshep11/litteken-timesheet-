@@ -1,0 +1,430 @@
+:root {
+  --blue: #1a4f8a;
+  --blue-light: #3f7fc4;
+  --ink: #1a1a1a;
+  --line: #000;
+  --bg: #e9ecef;
+  --panel: #fff;
+  --muted: #6b7280;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 14px;
+}
+
+.app {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+/* ── Top bar ── */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.topbar-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--blue);
+}
+.auth-label {
+  font-size: 12px;
+  color: var(--muted);
+  margin-right: 10px;
+}
+.loginbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.login-input {
+  border: 1px solid #cfd4da;
+  border-radius: 6px;
+  padding: 7px 10px;
+  font-size: 13px;
+  outline: none;
+}
+.login-input:focus {
+  border-color: var(--blue);
+}
+.login-error {
+  font-size: 12px;
+  color: #b42318;
+}
+
+/* ── Buttons ── */
+.btn {
+  border: 1px solid #cfd4da;
+  background: #fff;
+  color: var(--ink);
+  padding: 7px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.btn:hover:not(:disabled) {
+  background: #f3f5f7;
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.btn-primary {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: #fff;
+}
+.btn-primary:hover:not(:disabled) {
+  background: #14396b;
+}
+.btn-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--blue);
+}
+.btn-danger {
+  border-color: #e3b7b7;
+  color: #b42318;
+}
+.btn-danger:hover:not(:disabled) {
+  background: #fdeceb;
+}
+.btn-small {
+  padding: 3px 9px;
+  font-size: 12px;
+}
+
+/* ── Layout: sidebar + content ── */
+.layout {
+  display: grid;
+  grid-template-columns: 230px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+/* ── Week list ── */
+.weeklist {
+  background: var(--panel);
+  border: 1px solid #e2e6ea;
+  border-radius: 10px;
+  overflow: hidden;
+  position: sticky;
+  top: 16px;
+}
+.weeklist-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid #e9edf1;
+  font-weight: 700;
+  font-size: 13px;
+}
+.weeklist-scroll {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+.weeklist-empty {
+  padding: 14px 12px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.weeklist-item {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  width: 100%;
+  text-align: left;
+  border: none;
+  border-bottom: 1px solid #f0f2f4;
+  background: #fff;
+  padding: 9px 12px;
+  cursor: pointer;
+}
+.weeklist-item:hover {
+  background: #f5f8fb;
+}
+.weeklist-item.active {
+  background: #eaf1f9;
+  box-shadow: inset 3px 0 0 var(--blue);
+}
+.weeklist-week {
+  font-size: 11px;
+  color: var(--muted);
+}
+.weeklist-date {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* ── Content / controls ── */
+.content {
+  min-width: 0;
+}
+.controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.controls-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.controls-right {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.badge-dirty {
+  font-size: 11px;
+  color: #92400e;
+  background: #fef3c7;
+  border-radius: 999px;
+  padding: 2px 9px;
+}
+.status {
+  font-size: 12px;
+  color: var(--muted);
+}
+.viewer-note {
+  background: #eaf1f9;
+  border: 1px solid #d3e2f2;
+  color: #1a4f8a;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+
+/* ── The sheet (printable) ── */
+.sheet {
+  background: #fff;
+  border: 1px solid #e2e6ea;
+  border-radius: 10px;
+  padding: 20px 22px;
+}
+.sheet-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.sheet-header-left,
+.sheet-header-right {
+  font-size: 12px;
+  line-height: 1.5;
+  font-weight: 700;
+  white-space: nowrap;
+  padding-top: 8px;
+}
+.sheet-header-right {
+  text-align: right;
+}
+.sheet-header-logo {
+  flex: 1;
+  text-align: center;
+}
+.sheet-header-logo img {
+  max-width: 300px;
+  width: 100%;
+  height: auto;
+}
+
+.services-bar {
+  background: #222;
+  color: #fff;
+  font-size: 9px;
+  text-align: center;
+  padding: 3px 4px;
+  letter-spacing: 0.3px;
+  margin: 8px 0;
+  border-radius: 2px;
+}
+.services-bar span {
+  margin: 0 4px;
+  white-space: nowrap;
+}
+.services-bar span::before {
+  content: "\25C6  ";
+}
+
+.employee-line {
+  font-size: 13px;
+  margin: 6px 0;
+}
+.employee-line input {
+  border: none;
+  border-bottom: 1px solid #000;
+  width: 240px;
+  font-size: 13px;
+  outline: none;
+  padding: 0 2px 1px;
+}
+
+.notice {
+  font-size: 10px;
+  line-height: 1.45;
+  margin-bottom: 4px;
+}
+.notice u {
+  text-decoration: underline;
+}
+
+/* ── Grid ── */
+.grid-scroll {
+  overflow-x: auto;
+  margin-top: 8px;
+}
+table.timesheet {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+table.timesheet th,
+table.timesheet td {
+  border: 1px solid #000;
+  padding: 2px 3px;
+  text-align: center;
+  vertical-align: middle;
+}
+table.timesheet .th-top th {
+  font-size: 10px;
+  vertical-align: bottom;
+}
+table.timesheet .th-top .th-hours {
+  border-bottom: none;
+}
+table.timesheet .th-sub th {
+  font-size: 9px;
+  line-height: 1.2;
+  vertical-align: middle;
+}
+table.timesheet tbody td {
+  height: 22px;
+  padding: 0;
+}
+.cell {
+  width: 100%;
+  height: 22px;
+  border: none;
+  outline: none;
+  background: transparent;
+  text-align: center;
+  font-size: 11px;
+  font-family: inherit;
+  padding: 0 2px;
+}
+.cell.left {
+  text-align: left;
+}
+.cell:focus {
+  background: #eef6ff;
+}
+.cell:read-only {
+  cursor: default;
+}
+
+/* Column widths */
+col.c-date {
+  width: 7%;
+}
+col.c-contr {
+  width: 13%;
+}
+col.c-job {
+  width: 16%;
+}
+col.c-reg,
+col.c-ot,
+col.c-dt {
+  width: 5%;
+}
+col.c-desc {
+  width: 24%;
+}
+col.c-pay {
+  width: 7%;
+}
+col.c-ptype {
+  width: 8%;
+}
+col.c-pmeth {
+  width: 8%;
+}
+
+/* ── Mobile ── */
+@media (max-width: 800px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+  .weeklist {
+    position: static;
+  }
+  .weeklist-scroll {
+    display: flex;
+    max-height: none;
+    overflow-x: auto;
+  }
+  .weeklist-item {
+    min-width: 150px;
+    border-bottom: none;
+    border-right: 1px solid #f0f2f4;
+  }
+  .weeklist-item.active {
+    box-shadow: inset 0 -3px 0 var(--blue);
+  }
+}
+
+/* ── Print ── */
+@media print {
+  html,
+  body {
+    background: #fff;
+  }
+  .app {
+    max-width: none;
+    padding: 0;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .layout {
+    display: block;
+  }
+  .sheet {
+    border: none;
+    border-radius: 0;
+    padding: 0.35in 0.4in;
+  }
+  .grid-scroll {
+    overflow: visible;
+  }
+  table.timesheet {
+    min-width: 0;
+  }
+  .cell:focus {
+    background: transparent;
+  }
+}
