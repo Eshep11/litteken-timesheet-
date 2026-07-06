@@ -3,7 +3,7 @@
 import { useState } from "react";
 import TimesheetGrid from "./TimesheetGrid";
 import { weekLabel, mondayOf, currentMonday } from "@/lib/dates";
-import { emptyRows } from "@/lib/rows";
+import { emptyRows, emptyRow, isRowEmpty } from "@/lib/rows";
 import {
   saveTimesheet,
   createWeekAction,
@@ -91,6 +91,8 @@ export default function TimesheetApp({
     setRows((prev) => {
       const next = prev.slice();
       next[i] = { ...next[i], [field]: v };
+      // Auto-grow: always keep one blank row at the end so new entries appear.
+      if (!isRowEmpty(next[next.length - 1])) next.push(emptyRow());
       return next;
     });
     setDirty(true);
@@ -216,6 +218,29 @@ export default function TimesheetApp({
         </div>
       )}
 
+      {/* Mobile week picker (phones only) */}
+      <div className="week-dropdown no-print">
+        <label className="week-dropdown-label">Time sheet:</label>
+        <select
+          className="week-dropdown-select"
+          value={selectedWeek}
+          onChange={(e) => selectWeek(e.target.value)}
+          disabled={busy}
+        >
+          {weeks.length === 0 && <option value={selectedWeek}>This week (new)</option>}
+          {weeks.map((w) => (
+            <option key={w} value={w}>
+              Week of {weekLabel(w)}
+            </option>
+          ))}
+        </select>
+        {canEdit && (
+          <button className="btn btn-small" onClick={newWeek} disabled={busy}>
+            + New
+          </button>
+        )}
+      </div>
+
       <div className="layout">
         <aside className="weeklist no-print">
           <div className="weeklist-head">
@@ -263,11 +288,11 @@ export default function TimesheetApp({
               </button>
               {canEdit && (
                 <>
-                  <button className="btn" onClick={() => addRows(5)} disabled={busy}>
+                  <button className="btn hide-mobile" onClick={() => addRows(5)} disabled={busy}>
                     + 5 rows
                   </button>
                   <button
-                    className="btn btn-primary"
+                    className="btn btn-primary hide-mobile"
                     onClick={save}
                     disabled={busy || !dirty}
                   >
@@ -290,6 +315,22 @@ export default function TimesheetApp({
           />
         </section>
       </div>
+
+      {/* Sticky action bar (phones only) */}
+      {canEdit && (
+        <div className="mobile-actionbar no-print">
+          <button className="btn" onClick={() => window.print()}>
+            Print
+          </button>
+          <button
+            className="btn btn-primary actionbar-save"
+            onClick={save}
+            disabled={busy || !dirty}
+          >
+            {dirty ? "Save changes" : "Saved"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

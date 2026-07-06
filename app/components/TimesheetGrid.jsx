@@ -1,5 +1,7 @@
 "use client";
 
+import { isRowEmpty } from "@/lib/rows";
+
 export default function TimesheetGrid({
   employee,
   rows,
@@ -60,101 +62,177 @@ export default function TimesheetGrid({
         **If a customer pays on site, the payment information must be completed.
       </div>
 
-      {/* ── Grid ── */}
-      <div className="grid-scroll">
-        <table className="timesheet">
-          <colgroup>
-            <col className="c-date" />
-            <col className="c-contr" />
-            <col className="c-job" />
-            <col className="c-reg" />
-            <col className="c-ot" />
-            <col className="c-dt" />
-            <col className="c-desc" />
-            <col className="c-pay" />
-            <col className="c-ptype" />
-            <col className="c-pmeth" />
-          </colgroup>
-          <thead>
-            <tr className="th-top">
-              <th rowSpan={2}>Date</th>
-              <th rowSpan={2}>Contractor</th>
-              <th rowSpan={2}>Job Name</th>
-              <th colSpan={3} className="th-hours">
-                Hours
-              </th>
-              <th rowSpan={2}>Work Description</th>
-              <th>Payment</th>
-              <th>Payment</th>
-              <th>Payment Type</th>
-            </tr>
-            <tr className="th-sub">
-              <th>Reg</th>
-              <th>OT</th>
-              <th>DT</th>
-              <th>
-                Did
-                <br />
-                Customer
-                <br />
-                pay? Y/N
-              </th>
-              <th>
-                Partial
-                <br />
-                Pymt (P)
-                <br />
-                OR Full
-                <br />
-                Pymt (F)
-              </th>
-              <th>
-                Check#, C.C.,
-                <br />
-                Cash
-                <br />
-                &amp; Amount Pd
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row, i) => (
-              <tr key={i}>
-                <td>
-                  <Cell v={row.date} ro={!editable} onChange={(x) => onCellChange(i, "date", x)} />
-                </td>
-                <td>
-                  <Cell v={row.contractor} ro={!editable} align="left" onChange={(x) => onCellChange(i, "contractor", x)} />
-                </td>
-                <td>
-                  <Cell v={row.job} ro={!editable} align="left" onChange={(x) => onCellChange(i, "job", x)} />
-                </td>
-                <td>
-                  <Cell v={row.reg} ro={!editable} onChange={(x) => onCellChange(i, "reg", x)} />
-                </td>
-                <td>
-                  <Cell v={row.ot} ro={!editable} onChange={(x) => onCellChange(i, "ot", x)} />
-                </td>
-                <td>
-                  <Cell v={row.dt} ro={!editable} onChange={(x) => onCellChange(i, "dt", x)} />
-                </td>
-                <td>
-                  <Cell v={row.desc} ro={!editable} align="left" onChange={(x) => onCellChange(i, "desc", x)} />
-                </td>
-                <td>
-                  <Cell v={row.paid} ro={!editable} onChange={(x) => onCellChange(i, "paid", x)} />
-                </td>
-                <td>
-                  <Cell v={row.partialFull} ro={!editable} onChange={(x) => onCellChange(i, "partialFull", x)} />
-                </td>
-                <td>
-                  <Cell v={row.payType} ro={!editable} align="left" onChange={(x) => onCellChange(i, "payType", x)} />
-                </td>
+      {/* ── Table view (desktop + print) ── */}
+      <div className="sheet-table-view">
+        <div className="grid-scroll">
+          <table className="timesheet">
+            <colgroup>
+              <col className="c-date" />
+              <col className="c-contr" />
+              <col className="c-job" />
+              <col className="c-reg" />
+              <col className="c-ot" />
+              <col className="c-dt" />
+              <col className="c-desc" />
+              <col className="c-pay" />
+              <col className="c-ptype" />
+              <col className="c-pmeth" />
+            </colgroup>
+            <thead>
+              <tr className="th-top">
+                <th rowSpan={2}>Date</th>
+                <th rowSpan={2}>Contractor</th>
+                <th rowSpan={2}>Job Name</th>
+                <th colSpan={3} className="th-hours">
+                  Hours
+                </th>
+                <th rowSpan={2}>Work Description</th>
+                <th>Payment</th>
+                <th>Payment</th>
+                <th>Payment Type</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+              <tr className="th-sub">
+                <th>Reg</th>
+                <th>OT</th>
+                <th>DT</th>
+                <th>
+                  Did
+                  <br />
+                  Customer
+                  <br />
+                  pay? Y/N
+                </th>
+                <th>
+                  Partial
+                  <br />
+                  Pymt (P)
+                  <br />
+                  OR Full
+                  <br />
+                  Pymt (F)
+                </th>
+                <th>
+                  Check#, C.C.,
+                  <br />
+                  Cash
+                  <br />
+                  &amp; Amount Pd
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, i) => (
+                <tr key={i}>
+                  <td><Cell v={row.date} ro={!editable} onChange={(x) => onCellChange(i, "date", x)} /></td>
+                  <td><Cell v={row.contractor} ro={!editable} align="left" onChange={(x) => onCellChange(i, "contractor", x)} /></td>
+                  <td><Cell v={row.job} ro={!editable} align="left" onChange={(x) => onCellChange(i, "job", x)} /></td>
+                  <td><Cell v={row.reg} ro={!editable} onChange={(x) => onCellChange(i, "reg", x)} /></td>
+                  <td><Cell v={row.ot} ro={!editable} onChange={(x) => onCellChange(i, "ot", x)} /></td>
+                  <td><Cell v={row.dt} ro={!editable} onChange={(x) => onCellChange(i, "dt", x)} /></td>
+                  <td><Cell v={row.desc} ro={!editable} align="left" onChange={(x) => onCellChange(i, "desc", x)} /></td>
+                  <td><Cell v={row.paid} ro={!editable} onChange={(x) => onCellChange(i, "paid", x)} /></td>
+                  <td><Cell v={row.partialFull} ro={!editable} onChange={(x) => onCellChange(i, "partialFull", x)} /></td>
+                  <td><Cell v={row.payType} ro={!editable} align="left" onChange={(x) => onCellChange(i, "payType", x)} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
+
+      {/* ── Card view (phones only) ── */}
+      <div className="sheet-card-view">
+        <CardList rows={rows} editable={editable} onCellChange={onCellChange} />
+      </div>
+    </div>
+  );
+}
+
+function CardList({ rows, editable, onCellChange }) {
+  // Show every filled entry plus one blank entry to fill next.
+  let lastFilled = -1;
+  rows.forEach((r, i) => {
+    if (!isRowEmpty(r)) lastFilled = i;
+  });
+  const visibleCount = Math.min(rows.length, Math.max(lastFilled + 2, 1));
+  const visible = rows.slice(0, visibleCount);
+
+  return (
+    <div className="cards">
+      {visible.map((row, i) => (
+        <div className="entry-card" key={i}>
+          <div className="entry-card-head">Entry {i + 1}</div>
+
+          <label className="field">
+            <span>Date</span>
+            <input type="text" inputMode="text" value={row.date || ""} readOnly={!editable}
+              onChange={(e) => onCellChange(i, "date", e.target.value)} placeholder="e.g. 7/6" />
+          </label>
+
+          <label className="field">
+            <span>Contractor</span>
+            <input type="text" value={row.contractor || ""} readOnly={!editable}
+              onChange={(e) => onCellChange(i, "contractor", e.target.value)} />
+          </label>
+
+          <label className="field">
+            <span>Job Name</span>
+            <input type="text" value={row.job || ""} readOnly={!editable}
+              onChange={(e) => onCellChange(i, "job", e.target.value)} />
+          </label>
+
+          <div className="field-group hours-group">
+            <label className="field">
+              <span>Reg</span>
+              <input type="text" inputMode="decimal" value={row.reg || ""} readOnly={!editable}
+                onChange={(e) => onCellChange(i, "reg", e.target.value)} />
+            </label>
+            <label className="field">
+              <span>OT</span>
+              <input type="text" inputMode="decimal" value={row.ot || ""} readOnly={!editable}
+                onChange={(e) => onCellChange(i, "ot", e.target.value)} />
+            </label>
+            <label className="field">
+              <span>DT</span>
+              <input type="text" inputMode="decimal" value={row.dt || ""} readOnly={!editable}
+                onChange={(e) => onCellChange(i, "dt", e.target.value)} />
+            </label>
+          </div>
+
+          <label className="field">
+            <span>Work Description</span>
+            <textarea rows={2} value={row.desc || ""} readOnly={!editable}
+              onChange={(e) => onCellChange(i, "desc", e.target.value)} />
+          </label>
+
+          <div className="field-group">
+            <label className="field">
+              <span>Customer paid?</span>
+              <select value={row.paid || ""} disabled={!editable}
+                onChange={(e) => onCellChange(i, "paid", e.target.value)}>
+                <option value=""></option>
+                <option value="Y">Yes</option>
+                <option value="N">No</option>
+              </select>
+            </label>
+            <label className="field">
+              <span>Partial / Full</span>
+              <select value={row.partialFull || ""} disabled={!editable}
+                onChange={(e) => onCellChange(i, "partialFull", e.target.value)}>
+                <option value=""></option>
+                <option value="P">Partial</option>
+                <option value="F">Full</option>
+              </select>
+            </label>
+          </div>
+
+          <label className="field">
+            <span>Payment (Check#, C.C., Cash &amp; Amount Pd)</span>
+            <input type="text" value={row.payType || ""} readOnly={!editable}
+              onChange={(e) => onCellChange(i, "payType", e.target.value)} />
+          </label>
+        </div>
+      ))}
     </div>
   );
 }

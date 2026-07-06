@@ -559,3 +559,138 @@ col.c-pmeth {
     background: transparent;
   }
 }
+
+/* ═══════════════════════════════════════════════════════
+   MOBILE-FRIENDLY STYLES
+   ═══════════════════════════════════════════════════════ */
+
+/* Hidden by default; shown only on phones */
+.sheet-card-view { display: none; }
+.week-dropdown { display: none; }
+.mobile-actionbar { display: none; }
+
+@media screen and (max-width: 800px) {
+  html, body { font-size: 15px; }
+  .app { padding: 10px; }
+
+  /* Top bar */
+  .topbar { gap: 8px; }
+  .topbar-title { font-size: 15px; }
+
+  /* Boss employee selector — full width, big tap target */
+  .boss-bar { flex-wrap: wrap; padding: 10px 12px; }
+  .boss-select { flex: 1; min-width: 0; min-height: 44px; font-size: 16px; }
+
+  /* Single column; hide desktop sidebar, show dropdown */
+  .layout { display: block; }
+  .weeklist { display: none; }
+  .week-dropdown {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .week-dropdown-label { font-size: 13px; font-weight: 600; white-space: nowrap; }
+  .week-dropdown-select {
+    flex: 1;
+    min-width: 0;
+    min-height: 44px;
+    font-size: 16px;
+    border: 1px solid #cfd4da;
+    border-radius: 8px;
+    padding: 8px 10px;
+    background: #fff;
+  }
+  .week-dropdown .btn-small { min-height: 44px; padding: 8px 14px; font-size: 14px; }
+
+  /* Controls: hide Save/rows (moved to sticky bar); keep Print/Delete big */
+  .controls { gap: 8px; }
+  .controls-left { width: 100%; }
+  .controls-right { width: 100%; }
+  .controls-right .btn { flex: 1; min-height: 44px; font-size: 15px; }
+  .hide-mobile { display: none !important; }
+
+  /* Sheet padding */
+  .sheet { padding: 12px; border-radius: 10px; }
+
+  /* Letterhead stacks and centers */
+  .sheet-header { flex-direction: column; align-items: center; text-align: center; gap: 4px; }
+  .sheet-header-left, .sheet-header-right { white-space: normal; text-align: center; padding-top: 0; font-size: 12px; }
+  .sheet-header-logo img { max-width: 240px; }
+  .services-bar { font-size: 8px; }
+
+  .employee-line { font-size: 16px; }
+  .employee-line input { width: 100%; font-size: 16px; min-height: 40px; }
+
+  .notice { font-size: 11px; }
+
+  /* Swap table for cards */
+  .sheet-table-view { display: none; }
+  .sheet-card-view { display: block; }
+
+  /* Space for the sticky action bar */
+  .content { padding-bottom: 76px; }
+}
+
+/* ── Entry cards ── */
+.cards { display: flex; flex-direction: column; gap: 14px; margin-top: 10px; }
+.entry-card {
+  border: 1px solid #d7dde3;
+  border-radius: 12px;
+  padding: 14px;
+  background: #fbfcfd;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.entry-card-head {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--blue);
+  border-bottom: 1px solid #e6ebf0;
+  padding-bottom: 8px;
+}
+.entry-card .field { display: flex; flex-direction: column; gap: 5px; }
+.entry-card .field > span { font-size: 13px; font-weight: 600; color: #374151; }
+.entry-card .field input,
+.entry-card .field textarea,
+.entry-card .field select {
+  width: 100%;
+  font-size: 16px; /* 16px stops iOS auto-zoom */
+  min-height: 44px;
+  border: 1px solid #cfd4da;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #fff;
+  font-family: inherit;
+  outline: none;
+}
+.entry-card .field textarea { min-height: 60px; resize: vertical; }
+.entry-card .field input:focus,
+.entry-card .field textarea:focus,
+.entry-card .field select:focus { border-color: var(--blue); }
+.entry-card .field input:read-only,
+.entry-card .field textarea:read-only { background: #f3f5f7; }
+
+.field-group { display: flex; gap: 10px; }
+.field-group .field { flex: 1; }
+.hours-group .field input { text-align: center; }
+
+/* ── Sticky bottom action bar (phones) ── */
+@media screen and (max-width: 800px) {
+  .mobile-actionbar {
+    display: flex;
+    gap: 10px;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+    background: rgba(255, 255, 255, 0.97);
+    border-top: 1px solid #e2e6ea;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.06);
+    z-index: 50;
+  }
+  .mobile-actionbar .btn { min-height: 46px; font-size: 15px; }
+  .mobile-actionbar .actionbar-save { flex: 1; }
+}

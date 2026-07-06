@@ -6,6 +6,11 @@ export const metadata = {
   description: "Weekly employee time sheets for Litteken Plumbing Co., Inc.",
 };
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
+
 export default function RootLayout({ children }) {
   return (
     <ClerkProvider>
