@@ -1,4 +1,4 @@
-import { auth, currentUser } from "@clerk/nextjs/server";
+import { auth } from "@clerk/nextjs/server";
 import { getUser, getEmployees, getWeeks, getTimesheet } from "@/lib/db";
 import { currentMonday } from "@/lib/dates";
 import TimesheetApp from "./components/TimesheetApp";

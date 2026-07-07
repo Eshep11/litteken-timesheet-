@@ -149,19 +149,33 @@ export default function TimesheetGrid({
 }
 
 function CardList({ rows, editable, onCellChange }) {
-  // Show every filled entry plus one blank entry to fill next.
+  // Show every filled entry plus one blank entry to fill next (when editing).
+  // When view-only (boss), show just the filled entries.
   let lastFilled = -1;
   rows.forEach((r, i) => {
     if (!isRowEmpty(r)) lastFilled = i;
   });
-  const visibleCount = Math.min(rows.length, Math.max(lastFilled + 2, 1));
-  const visible = rows.slice(0, visibleCount);
+  const visibleCount = editable
+    ? Math.min(rows.length, Math.max(lastFilled + 2, 1))
+    : lastFilled + 1;
+  const visible = rows.slice(0, Math.max(visibleCount, 0));
+
+  if (!editable && visible.length === 0) {
+    return <div className="cards-empty">No entries for this week yet.</div>;
+  }
 
   return (
     <div className="cards">
       {visible.map((row, i) => (
         <div className="entry-card" key={i}>
-          <div className="entry-card-head">Entry {i + 1}</div>
+          <div className="entry-card-head">
+            <span>Entry {i + 1}</span>
+            {(row.date || row.job) && (
+              <span className="entry-card-summary">
+                {[row.date, row.job].filter(Boolean).join(" · ")}
+              </span>
+            )}
+          </div>
 
           <label className="field">
             <span>Date</span>

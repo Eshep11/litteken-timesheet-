@@ -694,3 +694,172 @@ col.c-pmeth {
   .mobile-actionbar .btn { min-height: 46px; font-size: 15px; }
   .mobile-actionbar .actionbar-save { flex: 1; }
 }
+
+/* ═══════════════════════════════════════════════════════
+   MANAGE TEAM MODAL
+   ═══════════════════════════════════════════════════════ */
+.manage-team-btn { min-height: 36px; }
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 24px 16px;
+  overflow-y: auto;
+  z-index: 100;
+}
+.modal {
+  background: #fff;
+  border-radius: 14px;
+  width: 100%;
+  max-width: 520px;
+  padding: 20px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+}
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.modal-title { font-size: 18px; margin: 0; color: var(--blue); }
+.modal-close {
+  border: none;
+  background: transparent;
+  font-size: 26px;
+  line-height: 1;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0 6px;
+}
+.modal-error {
+  background: #fdeceb;
+  border: 1px solid #f3c6c2;
+  color: #b42318;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+.modal-section {
+  border-top: 1px solid #eef1f4;
+  padding-top: 16px;
+  margin-top: 16px;
+}
+.modal-section:first-of-type { border-top: none; padding-top: 8px; margin-top: 8px; }
+.modal-section-title { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+.modal-hint { font-size: 13px; color: var(--muted); margin: 0 0 10px; line-height: 1.4; }
+
+.invite-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+.invite-buttons .btn { flex: 1; min-height: 42px; }
+.invite-result { margin-top: 12px; }
+.invite-text {
+  width: 100%;
+  border: 1px solid #cfd4da;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  line-height: 1.4;
+  resize: vertical;
+  background: #f9fafb;
+}
+.invite-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+.invite-note { font-size: 12px; color: var(--muted); }
+
+.team-list { list-style: none; margin: 0; padding: 0; }
+.team-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid #f0f2f4;
+}
+.team-item:last-child { border-bottom: none; }
+.team-person { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.team-name { font-size: 14px; font-weight: 600; }
+.team-email { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
+
+@media screen and (max-width: 800px) {
+  .modal { padding: 16px; }
+  .invite-buttons .btn { min-height: 46px; font-size: 15px; }
+  .team-item .btn { min-height: 40px; }
+}
+
+/* ── View-only note (boss reviewing an employee) ── */
+.viewer-note {
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  color: #9a3412;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  line-height: 1.4;
+  margin-bottom: 10px;
+}
+.cards-empty {
+  padding: 20px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* ── Week totals chip ── */
+.totals-chip {
+  font-size: 12px;
+  font-weight: 600;
+  color: #166534;
+  background: #ecfdf3;
+  border: 1px solid #bbe5c8;
+  border-radius: 999px;
+  padding: 2px 10px;
+  white-space: nowrap;
+}
+
+/* ── New week modal ── */
+.modal-narrow { max-width: 380px; }
+.date-input {
+  width: 100%;
+  border: 1px solid #cfd4da;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 16px;
+  min-height: 46px;
+  font-family: inherit;
+  background: #fff;
+  margin-top: 4px;
+}
+.date-input:focus { border-color: var(--blue); outline: none; }
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+.modal-actions .btn { min-height: 42px; }
+
+/* ── Entry card header summary ── */
+.entry-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.entry-card-summary {
+  font-weight: 600;
+  color: #374151;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}

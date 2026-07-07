@@ -1,11 +1,13 @@
 # Litteken Plumbing — Time Sheets (multi-user)
 
 A web app where your crew each keep their own weekly time sheets, and bosses
-can see and edit everyone's.
+can review everyone's.
 
 - Everyone signs in with their own account (email + password).
 - **Employees** see and edit only their own weekly sheets.
-- **Bosses** see and edit everyone's sheets and can tell whose is whose.
+- **Bosses** can view and print everyone's sheets, invite people, and remove
+  people who've left — but only the employee can edit their own hours. This
+  keeps each timesheet an honest record authored by the person who worked.
 - Two sign-up codes control who can join: an **employee code** and a
   **boss code**. You hand out whichever is right for each person.
 - Any week can be printed / saved as a PDF (Print → "Save as PDF").
@@ -104,8 +106,14 @@ The app builds its own tables automatically — no SQL to write.
 starts a week, fill in the grid, **Save**. **Download / Print** makes a PDF.
 
 **Bosses:** a **"Viewing employee"** dropdown at the top lets you pick any
-employee and see/edit their sheets, with their name shown. Everything else
-works the same.
+employee and review their sheets (view and print only — you can't change an
+employee's hours). Use the **Manage team** button to:
+
+- **Invite** people — pick "employee" or "boss" and it builds a ready-to-send
+  message with the sign-up link and access code. Copy it and send by text/email.
+- **Remove** people who've left — this deletes their access and timesheets.
+  (Their Clerk login stays; delete it in the Clerk dashboard if you want it
+  fully gone.)
 
 ---
 

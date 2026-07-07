@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import TimesheetGrid from "./TimesheetGrid";
-import { weekLabel, mondayOf, currentMonday } from "@/lib/dates";
+import TeamManager from "./TeamManager";
+import { weekLabel, mondayOf, currentMonday, todayLocal } from "@/lib/dates";
 import { emptyRows, emptyRow, isRowEmpty } from "@/lib/rows";
 import {
   saveTimesheet,
@@ -19,6 +20,7 @@ export default function TimesheetApp({
   initialWeek,
   initialSheet,
 }) {
+  const [employeeList, setEmployeeList] = useState(employees || []);
   const [owner, setOwner] = useState({ id: ownerId, name: ownerName });
   const [weeks, setWeeks] = useState(initialWeeks);
   const [selectedWeek, setSelectedWeek] = useState(initialWeek);
@@ -33,12 +35,40 @@ export default function TimesheetApp({
   const [dirty, setDirty] = useState(false);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
+  const [showTeam, setShowTeam] = useState(false);
+  const [showNewWeek, setShowNewWeek] = useState(false);
 
-  const canEdit = !!owner.id;
+  // Bosses are view-only. Only an employee editing their own sheet can edit.
+  const canEdit = !isBoss && !!owner.id;
+
+  // Warn before closing/leaving the page with unsaved changes.
+  useEffect(() => {
+    function warn(e) {
+      if (dirty) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    }
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty]);
+
+  // Week hour totals (shown on screen only; the printed sheet stays
+  // identical to the paper form).
+  const totals = rows.reduce(
+    (acc, r) => {
+      acc.reg += parseFloat(r.reg) || 0;
+      acc.ot += parseFloat(r.ot) || 0;
+      acc.dt += parseFloat(r.dt) || 0;
+      return acc;
+    },
+    { reg: 0, ot: 0, dt: 0 }
+  );
+  const fmt = (n) => parseFloat(n.toFixed(2));
 
   // ── Boss: switch which employee we're viewing ──
   async function selectEmployee(empId) {
-    const emp = employees.find((e) => e.clerk_id === empId);
+    const emp = employeeList.find((e) => e.clerk_id === empId);
     if (!emp || emp.clerk_id === owner.id) return;
     if (dirty && !confirm("You have unsaved changes. Switch anyway?")) return;
     setBusy(true);
@@ -59,6 +89,25 @@ export default function TimesheetApp({
       setStatus("Could not load that employee.");
     } finally {
       setBusy(false);
+    }
+  }
+
+  // ── Boss: an employee was removed ──
+  function handleRemoved(id) {
+    const remaining = employeeList.filter((e) => e.clerk_id !== id);
+    setEmployeeList(remaining);
+    if (owner.id === id) {
+      if (remaining.length) {
+        // Load the first remaining employee.
+        setOwner({ id: null, name: "" }); // reset so selectEmployee runs
+        selectEmployee(remaining[0].clerk_id);
+      } else {
+        setOwner({ id: null, name: "" });
+        setWeeks([]);
+        setSelectedWeek(currentMonday());
+        setEmployee("");
+        setRows(emptyRows(20));
+      }
     }
   }
 
@@ -91,7 +140,6 @@ export default function TimesheetApp({
     setRows((prev) => {
       const next = prev.slice();
       next[i] = { ...next[i], [field]: v };
-      // Auto-grow: always keep one blank row at the end so new entries appear.
       if (!isRowEmpty(next[next.length - 1])) next.push(emptyRow());
       return next;
     });
@@ -122,19 +170,23 @@ export default function TimesheetApp({
     }
   }
 
-  // ── New week ──
-  async function newWeek() {
+  // ── New week (date-picker modal; snaps any picked date to its Monday) ──
+  function newWeek() {
     if (!owner.id) return;
-    const input = prompt(
-      "New timesheet — enter any date in that week (YYYY-MM-DD):",
-      currentMonday()
-    );
-    if (!input) return;
+    setShowNewWeek(true);
+  }
+
+  async function createWeekFor(dateStr) {
+    setShowNewWeek(false);
+    if (!owner.id || !dateStr) return;
     let monday;
     try {
-      monday = mondayOf(input.trim());
+      monday = mondayOf(dateStr.trim());
     } catch {
-      alert("That date didn't look right. Use the format YYYY-MM-DD.");
+      monday = "";
+    }
+    if (!monday || monday.includes("NaN")) {
+      alert("That date didn't look right. Please pick a date.");
       return;
     }
     if (weeks.includes(monday)) {
@@ -187,136 +239,155 @@ export default function TimesheetApp({
     }
   }
 
-  // ── Boss with no employees yet ──
-  if (isBoss && employees.length === 0) {
-    return (
-      <div className="empty-state">
-        No employees have signed up yet. Once they create an account with the
-        employee code, they'll appear here and you'll be able to view and edit
-        their timesheets.
-      </div>
-    );
-  }
+  const hasSheet = !!owner.id;
 
   return (
     <div>
       {isBoss && (
         <div className="boss-bar no-print">
-          <label className="boss-label">Viewing employee:</label>
-          <select
-            className="boss-select"
-            value={owner.id || ""}
-            onChange={(e) => selectEmployee(e.target.value)}
-            disabled={busy}
-          >
-            {employees.map((e) => (
-              <option key={e.clerk_id} value={e.clerk_id}>
-                {e.name}
-              </option>
-            ))}
-          </select>
+          {employeeList.length > 0 && (
+            <>
+              <label className="boss-label">Viewing employee:</label>
+              <select
+                className="boss-select"
+                value={owner.id || ""}
+                onChange={(e) => selectEmployee(e.target.value)}
+                disabled={busy}
+              >
+                {employeeList.map((e) => (
+                  <option key={e.clerk_id} value={e.clerk_id}>
+                    {e.name}
+                  </option>
+                ))}
+              </select>
+            </>
+          )}
+          <button className="btn btn-small manage-team-btn" onClick={() => setShowTeam(true)}>
+            Manage team
+          </button>
         </div>
       )}
 
-      {/* Mobile week picker (phones only) */}
-      <div className="week-dropdown no-print">
-        <label className="week-dropdown-label">Time sheet:</label>
-        <select
-          className="week-dropdown-select"
-          value={selectedWeek}
-          onChange={(e) => selectWeek(e.target.value)}
-          disabled={busy}
-        >
-          {weeks.length === 0 && <option value={selectedWeek}>This week (new)</option>}
-          {weeks.map((w) => (
-            <option key={w} value={w}>
-              Week of {weekLabel(w)}
-            </option>
-          ))}
-        </select>
-        {canEdit && (
-          <button className="btn btn-small" onClick={newWeek} disabled={busy}>
-            + New
-          </button>
-        )}
-      </div>
+      {hasSheet && (
+        <div className="week-dropdown no-print">
+          <label className="week-dropdown-label">Time sheet:</label>
+          <select
+            className="week-dropdown-select"
+            value={selectedWeek}
+            onChange={(e) => selectWeek(e.target.value)}
+            disabled={busy}
+          >
+            {weeks.length === 0 && <option value={selectedWeek}>This week (new)</option>}
+            {weeks.map((w) => (
+              <option key={w} value={w}>
+                Week of {weekLabel(w)}
+              </option>
+            ))}
+          </select>
+          {canEdit && (
+            <button className="btn btn-small" onClick={newWeek} disabled={busy}>
+              + New
+            </button>
+          )}
+        </div>
+      )}
 
-      <div className="layout">
-        <aside className="weeklist no-print">
-          <div className="weeklist-head">
-            <span>Time sheets</span>
-            {canEdit && (
-              <button className="btn btn-small" onClick={newWeek} disabled={busy}>
-                + New
-              </button>
-            )}
-          </div>
-          <div className="weeklist-scroll">
-            {weeks.length === 0 && (
-              <div className="weeklist-empty">
-                No timesheets yet.
-                {canEdit ? ' Tap "+ New" to start one.' : ""}
+      {!hasSheet ? (
+        <div className="empty-state">
+          {isBoss
+            ? 'No employees have signed up yet. Use "Manage team" above to invite your crew — once they create an account with the employee code, they\'ll appear here.'
+            : "Loading your timesheet…"}
+        </div>
+      ) : (
+        <div className="layout">
+          <aside className="weeklist no-print">
+            <div className="weeklist-head">
+              <span>Time sheets</span>
+              {canEdit && (
+                <button className="btn btn-small" onClick={newWeek} disabled={busy}>
+                  + New
+                </button>
+              )}
+            </div>
+            <div className="weeklist-scroll">
+              {weeks.length === 0 && (
+                <div className="weeklist-empty">
+                  No timesheets yet.
+                  {canEdit ? ' Tap "+ New" to start one.' : ""}
+                </div>
+              )}
+              {weeks.map((w) => (
+                <button
+                  key={w}
+                  className={"weeklist-item" + (w === selectedWeek ? " active" : "")}
+                  onClick={() => selectWeek(w)}
+                  disabled={busy}
+                >
+                  <span className="weeklist-week">Week of</span>
+                  <span className="weeklist-date">{weekLabel(w)}</span>
+                </button>
+              ))}
+            </div>
+          </aside>
+
+          <section className="content">
+            <div className="controls no-print">
+              <div className="controls-left">
+                <strong>Week of {weekLabel(selectedWeek)}</strong>
+                {isBoss && owner.name && (
+                  <span className="owner-chip">{owner.name}</span>
+                )}
+                {(totals.reg > 0 || totals.ot > 0 || totals.dt > 0) && (
+                  <span className="totals-chip">
+                    Reg {fmt(totals.reg)} · OT {fmt(totals.ot)} · DT {fmt(totals.dt)}
+                  </span>
+                )}
+                {dirty && <span className="badge-dirty">Unsaved changes</span>}
+                {status && <span className="status">{status}</span>}
+              </div>
+              <div className="controls-right">
+                <button className="btn" onClick={() => window.print()}>
+                  Download / Print
+                </button>
+                {canEdit && (
+                  <>
+                    <button className="btn hide-mobile" onClick={() => addRows(5)} disabled={busy}>
+                      + 5 rows
+                    </button>
+                    <button
+                      className="btn btn-primary hide-mobile"
+                      onClick={save}
+                      disabled={busy || !dirty}
+                    >
+                      Save
+                    </button>
+                    <button className="btn btn-danger" onClick={removeWeek} disabled={busy}>
+                      Delete week
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {isBoss && (
+              <div className="viewer-note no-print">
+                View only — you're reviewing {owner.name}&apos;s timesheet. Only
+                the employee can edit their own hours. You can print or download
+                it.
               </div>
             )}
-            {weeks.map((w) => (
-              <button
-                key={w}
-                className={"weeklist-item" + (w === selectedWeek ? " active" : "")}
-                onClick={() => selectWeek(w)}
-                disabled={busy}
-              >
-                <span className="weeklist-week">Week of</span>
-                <span className="weeklist-date">{weekLabel(w)}</span>
-              </button>
-            ))}
-          </div>
-        </aside>
 
-        <section className="content">
-          <div className="controls no-print">
-            <div className="controls-left">
-              <strong>Week of {weekLabel(selectedWeek)}</strong>
-              {isBoss && owner.name && (
-                <span className="owner-chip">{owner.name}</span>
-              )}
-              {dirty && <span className="badge-dirty">Unsaved changes</span>}
-              {status && <span className="status">{status}</span>}
-            </div>
-            <div className="controls-right">
-              <button className="btn" onClick={() => window.print()}>
-                Download / Print
-              </button>
-              {canEdit && (
-                <>
-                  <button className="btn hide-mobile" onClick={() => addRows(5)} disabled={busy}>
-                    + 5 rows
-                  </button>
-                  <button
-                    className="btn btn-primary hide-mobile"
-                    onClick={save}
-                    disabled={busy || !dirty}
-                  >
-                    Save
-                  </button>
-                  <button className="btn btn-danger" onClick={removeWeek} disabled={busy}>
-                    Delete week
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
+            <TimesheetGrid
+              employee={employee}
+              rows={rows}
+              editable={canEdit}
+              onEmployeeChange={updateEmployee}
+              onCellChange={updateCell}
+            />
+          </section>
+        </div>
+      )}
 
-          <TimesheetGrid
-            employee={employee}
-            rows={rows}
-            editable={canEdit}
-            onEmployeeChange={updateEmployee}
-            onCellChange={updateCell}
-          />
-        </section>
-      </div>
-
-      {/* Sticky action bar (phones only) */}
       {canEdit && (
         <div className="mobile-actionbar no-print">
           <button className="btn" onClick={() => window.print()}>
@@ -327,10 +398,60 @@ export default function TimesheetApp({
             onClick={save}
             disabled={busy || !dirty}
           >
-            {dirty ? "Save changes" : "Saved"}
+            {busy ? "Saving…" : dirty ? "Save changes" : "Saved"}
           </button>
         </div>
       )}
+
+      {showNewWeek && (
+        <NewWeekModal
+          onCancel={() => setShowNewWeek(false)}
+          onCreate={createWeekFor}
+        />
+      )}
+
+      {isBoss && (
+        <TeamManager
+          open={showTeam}
+          employees={employeeList}
+          onClose={() => setShowTeam(false)}
+          onRemoved={handleRemoved}
+        />
+      )}
+    </div>
+  );
+}
+
+function NewWeekModal({ onCancel, onCreate }) {
+  const [date, setDate] = useState(todayLocal());
+  return (
+    <div className="modal-overlay" onClick={onCancel}>
+      <div className="modal modal-narrow" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-head">
+          <h2 className="modal-title">New time sheet</h2>
+          <button className="modal-close" onClick={onCancel} aria-label="Close">
+            ×
+          </button>
+        </div>
+        <p className="modal-hint">
+          Pick any day in the week you want — it will snap to that week
+          automatically.
+        </p>
+        <input
+          type="date"
+          className="date-input"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+        />
+        <div className="modal-actions">
+          <button className="btn" onClick={onCancel}>
+            Cancel
+          </button>
+          <button className="btn btn-primary" onClick={() => onCreate(date)}>
+            Create week
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
