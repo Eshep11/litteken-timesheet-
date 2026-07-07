@@ -10,7 +10,7 @@ export default function TopBar({ name, role }) {
         {name && (
           <span className="auth-label">
             {name}
-            {role === "boss" && <span className="role-badge">Boss</span>}
+            {role === "boss" && <span className="role-badge">Manager</span>}
           </span>
         )}
         <UserButton afterSignOutUrl="/sign-in" />

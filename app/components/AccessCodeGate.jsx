@@ -12,7 +12,7 @@ export default function AccessCodeGate() {
         <h1 className="gate-title">One more step</h1>
         <p className="gate-text">
           Enter your name and the access code you were given. The code decides
-          whether you're set up as an employee or a boss.
+          whether you're set up as an employee or a manager.
         </p>
         <form action={formAction} className="gate-form">
           <label className="gate-label">

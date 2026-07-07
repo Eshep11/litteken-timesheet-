@@ -43,15 +43,22 @@ export default function TeamManager({ open, employees, onClose, onRemoved }) {
       }
       const origin =
         typeof window !== "undefined" ? window.location.origin : "";
-      const who = role === "boss" ? "a boss (manager) account" : "an employee account";
+      const who = role === "boss" ? "a manager account" : "an employee account";
+      const closing =
+        role === "boss"
+          ? "Then you can review and print employees' time sheets from your phone or computer."
+          : "Then you can fill out your weekly time sheets from your phone or computer.";
+      const homeScreenTip =
+        `Tip: Tap the Share button and choose "Add to Home Screen" to add ` +
+        `your timesheets as an app to your home screen.`;
       const message =
         `You've been invited to the Litteken Plumbing time sheet app.\n\n` +
         `1. Open this link: ${origin}/sign-up\n` +
         `2. Sign up with your email and a password.\n` +
         `3. When it asks for an access code, enter:  ${code}\n` +
         `4. Type your name, and you're in.\n\n` +
-        `This sets you up with ${who}. Then you can fill out your weekly ` +
-        `time sheets from your phone or computer.`;
+        `This sets you up with ${who}. ${closing}\n\n` +
+        `${homeScreenTip}`;
       setInvite({ role, message });
     } catch {
       setError("Could not create the invite. Are you still signed in?");
@@ -96,7 +103,7 @@ export default function TeamManager({ open, employees, onClose, onRemoved }) {
               Invite an employee
             </button>
             <button className="btn" onClick={() => makeInvite("boss")} disabled={busy}>
-              Invite a boss
+              Invite a manager
             </button>
           </div>
 
@@ -108,7 +115,7 @@ export default function TeamManager({ open, employees, onClose, onRemoved }) {
                   {copied ? "Copied!" : "Copy message"}
                 </button>
                 <span className="invite-note">
-                  {invite.role === "boss" ? "Boss" : "Employee"} invite
+                  {invite.role === "boss" ? "Manager" : "Employee"} invite
                 </span>
               </div>
             </div>
