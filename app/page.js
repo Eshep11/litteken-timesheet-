@@ -53,9 +53,10 @@ export default async function Page({ searchParams }) {
   if (ownerId) {
     weeks = await getWeeks(ownerId);
     const requestedWeek = sp?.week;
+    const requestedExists = requestedWeek && weeks.some((w) => w.week_start === requestedWeek);
     selected =
-      (requestedWeek && weeks.includes(requestedWeek) && requestedWeek) ||
-      weeks[0] ||
+      (requestedExists && requestedWeek) ||
+      (weeks[0] && weeks[0].week_start) ||
       currentMonday();
     sheet =
       (await getTimesheet(ownerId, selected)) || {

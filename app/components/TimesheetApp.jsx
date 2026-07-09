@@ -3,12 +3,22 @@
 import { useState, useEffect } from "react";
 import TimesheetGrid from "./TimesheetGrid";
 import TeamManager from "./TeamManager";
-import { weekLabel, mondayOf, currentMonday, todayLocal } from "@/lib/dates";
+import TeamStatus from "./TeamStatus";
+import {
+  weekLabel,
+  mondayOf,
+  currentMonday,
+  todayLocal,
+  formatDateTime,
+  deadlineLabel,
+} from "@/lib/dates";
+import { isLocked } from "@/lib/lock";
 import { emptyRows, emptyRow, isRowEmpty } from "@/lib/rows";
 import {
   saveTimesheet,
   createWeekAction,
   deleteWeekAction,
+  submitTimesheetAction,
 } from "@/app/actions";
 
 export default function TimesheetApp({
@@ -22,7 +32,7 @@ export default function TimesheetApp({
 }) {
   const [employeeList, setEmployeeList] = useState(employees || []);
   const [owner, setOwner] = useState({ id: ownerId, name: ownerName });
-  const [weeks, setWeeks] = useState(initialWeeks);
+  const [weeks, setWeeks] = useState(initialWeeks); // [{week_start, submitted_at}]
   const [selectedWeek, setSelectedWeek] = useState(initialWeek);
   const [employee, setEmployee] = useState(
     initialSheet.employee || ownerName || ""
@@ -32,14 +42,18 @@ export default function TimesheetApp({
       ? initialSheet.data
       : emptyRows(20)
   );
+  const [createdAt, setCreatedAt] = useState(initialSheet.created_at || null);
+  const [submittedAt, setSubmittedAt] = useState(initialSheet.submitted_at || null);
   const [dirty, setDirty] = useState(false);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
   const [showTeam, setShowTeam] = useState(false);
+  const [showStatus, setShowStatus] = useState(false);
   const [showNewWeek, setShowNewWeek] = useState(false);
 
-  // Bosses are view-only. Only an employee editing their own sheet can edit.
-  const canEdit = !isBoss && !!owner.id;
+  const locked = isLocked(selectedWeek, submittedAt);
+  // Bosses are view-only. Employees can edit only their own, unlocked sheet.
+  const canEdit = !isBoss && !!owner.id && !locked;
 
   // Warn before closing/leaving the page with unsaved changes.
   useEffect(() => {
@@ -53,8 +67,8 @@ export default function TimesheetApp({
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty]);
 
-  // Week hour totals (shown on screen only; the printed sheet stays
-  // identical to the paper form).
+  // Week hour totals (screen only; the printed sheet stays identical to the
+  // paper form).
   const totals = rows.reduce(
     (acc, r) => {
       acc.reg += parseFloat(r.reg) || 0;
@@ -66,6 +80,13 @@ export default function TimesheetApp({
   );
   const fmt = (n) => parseFloat(n.toFixed(2));
 
+  function applySheet(sheet, fallbackName) {
+    setEmployee(sheet.employee || fallbackName || "");
+    setRows(sheet.data && sheet.data.length ? sheet.data : emptyRows(20));
+    setCreatedAt(sheet.created_at || null);
+    setSubmittedAt(sheet.submitted_at || null);
+  }
+
   // ── Boss: switch which employee we're viewing ──
   async function selectEmployee(empId) {
     const emp = employeeList.find((e) => e.clerk_id === empId);
@@ -76,14 +97,13 @@ export default function TimesheetApp({
     try {
       const wr = await fetch(`/api/weeks?owner=${empId}`);
       const { weeks: newWeeks } = await wr.json();
-      const first = newWeeks[0] || currentMonday();
+      const first = (newWeeks[0] && newWeeks[0].week_start) || currentMonday();
       const sr = await fetch(`/api/timesheet?owner=${empId}&week=${first}`);
       const sheet = await sr.json();
       setOwner({ id: emp.clerk_id, name: emp.name });
       setWeeks(newWeeks);
       setSelectedWeek(first);
-      setEmployee(sheet.employee || emp.name);
-      setRows(sheet.data && sheet.data.length ? sheet.data : emptyRows(20));
+      applySheet(sheet, emp.name);
       setDirty(false);
     } catch {
       setStatus("Could not load that employee.");
@@ -98,8 +118,7 @@ export default function TimesheetApp({
     setEmployeeList(remaining);
     if (owner.id === id) {
       if (remaining.length) {
-        // Load the first remaining employee.
-        setOwner({ id: null, name: "" }); // reset so selectEmployee runs
+        setOwner({ id: null, name: "" });
         selectEmployee(remaining[0].clerk_id);
       } else {
         setOwner({ id: null, name: "" });
@@ -107,6 +126,8 @@ export default function TimesheetApp({
         setSelectedWeek(currentMonday());
         setEmployee("");
         setRows(emptyRows(20));
+        setCreatedAt(null);
+        setSubmittedAt(null);
       }
     }
   }
@@ -121,8 +142,7 @@ export default function TimesheetApp({
       const res = await fetch(`/api/timesheet?owner=${owner.id}&week=${week}`);
       const sheet = await res.json();
       setSelectedWeek(week);
-      setEmployee(sheet.employee || owner.name);
-      setRows(sheet.data && sheet.data.length ? sheet.data : emptyRows(20));
+      applySheet(sheet, owner.name);
       setDirty(false);
     } catch {
       setStatus("Could not load that week.");
@@ -152,14 +172,15 @@ export default function TimesheetApp({
 
   // ── Save ──
   async function save() {
-    if (!owner.id) return;
+    if (!owner.id || locked) return;
     setBusy(true);
     setStatus("Saving…");
     try {
       await saveTimesheet(owner.id, owner.name, selectedWeek, employee, rows);
-      if (!weeks.includes(selectedWeek)) {
-        setWeeks((w) => [selectedWeek, ...w].sort().reverse());
+      if (!weeks.some((w) => w.week_start === selectedWeek)) {
+        setWeeks((w) => [{ week_start: selectedWeek, submitted_at: null }, ...w]);
       }
+      if (!createdAt) setCreatedAt(new Date().toISOString());
       setDirty(false);
       setStatus("Saved.");
       setTimeout(() => setStatus(""), 2000);
@@ -170,7 +191,47 @@ export default function TimesheetApp({
     }
   }
 
-  // ── New week (date-picker modal; snaps any picked date to its Monday) ──
+  // ── Submit (locks the sheet) ──
+  async function submit() {
+    if (!owner.id || locked) return;
+    if (
+      !confirm(
+        "Submit this timesheet? You won't be able to edit it after this.\n\n" +
+          "(If you submit by mistake, you can still delete the week and start over.)"
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    setStatus("");
+    try {
+      // Make sure the latest edits are saved before locking them in.
+      if (dirty) {
+        await saveTimesheet(owner.id, owner.name, selectedWeek, employee, rows);
+        setDirty(false);
+      }
+      await submitTimesheetAction(owner.id, selectedWeek);
+      const nowIso = new Date().toISOString();
+      setSubmittedAt(nowIso);
+      if (!weeks.some((w) => w.week_start === selectedWeek)) {
+        setWeeks((w) => [{ week_start: selectedWeek, submitted_at: nowIso }, ...w]);
+      } else {
+        setWeeks((w) =>
+          w.map((wk) =>
+            wk.week_start === selectedWeek ? { ...wk, submitted_at: nowIso } : wk
+          )
+        );
+      }
+      setStatus("Submitted.");
+      setTimeout(() => setStatus(""), 2500);
+    } catch {
+      setStatus("Could not submit. Are you still signed in?");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // ── New week ──
   function newWeek() {
     if (!owner.id) return;
     setShowNewWeek(true);
@@ -189,7 +250,7 @@ export default function TimesheetApp({
       alert("That date didn't look right. Please pick a date.");
       return;
     }
-    if (weeks.includes(monday)) {
+    if (weeks.some((w) => w.week_start === monday)) {
       selectWeek(monday);
       return;
     }
@@ -197,10 +258,12 @@ export default function TimesheetApp({
     setStatus("Creating week…");
     try {
       await createWeekAction(owner.id, owner.name, monday);
-      setWeeks((w) => [monday, ...w].sort().reverse());
+      setWeeks((w) => [{ week_start: monday, submitted_at: null }, ...w]);
       setSelectedWeek(monday);
       setEmployee(owner.name);
       setRows(emptyRows(20));
+      setCreatedAt(new Date().toISOString());
+      setSubmittedAt(null);
       setDirty(false);
       setStatus("");
     } catch {
@@ -210,27 +273,23 @@ export default function TimesheetApp({
     }
   }
 
-  // ── Delete week ──
+  // ── Delete week (allowed even when locked — the accidental-submit fix) ──
   async function removeWeek() {
     if (!owner.id) return;
-    if (
-      !confirm(
-        `Delete the timesheet for the week of ${weekLabel(selectedWeek)}? This cannot be undone.`
-      )
-    ) {
-      return;
-    }
+    const msg = locked
+      ? `Delete the timesheet for the week of ${weekLabel(selectedWeek)}? It's locked/submitted, but you can still delete it and start over. This cannot be undone.`
+      : `Delete the timesheet for the week of ${weekLabel(selectedWeek)}? This cannot be undone.`;
+    if (!confirm(msg)) return;
     setBusy(true);
     try {
       await deleteWeekAction(owner.id, selectedWeek);
-      const remaining = weeks.filter((w) => w !== selectedWeek);
+      const remaining = weeks.filter((w) => w.week_start !== selectedWeek);
       setWeeks(remaining);
-      const next = remaining[0] || currentMonday();
+      const next = (remaining[0] && remaining[0].week_start) || currentMonday();
       setSelectedWeek(next);
       const res = await fetch(`/api/timesheet?owner=${owner.id}&week=${next}`);
       const sheet = await res.json();
-      setEmployee(sheet.employee || owner.name);
-      setRows(sheet.data && sheet.data.length ? sheet.data : emptyRows(20));
+      applySheet(sheet, owner.name);
       setDirty(false);
     } catch {
       setStatus("Could not delete.");
@@ -240,6 +299,12 @@ export default function TimesheetApp({
   }
 
   const hasSheet = !!owner.id;
+  const statusInfo = {
+    createdLabel: formatDateTime(createdAt),
+    submittedLabel: formatDateTime(submittedAt),
+    locked,
+    deadlineText: deadlineLabel(selectedWeek),
+  };
 
   return (
     <div>
@@ -262,6 +327,9 @@ export default function TimesheetApp({
               </select>
             </>
           )}
+          <button className="btn btn-small" onClick={() => setShowStatus(true)}>
+            Weekly status
+          </button>
           <button className="btn btn-small manage-team-btn" onClick={() => setShowTeam(true)}>
             Manage team
           </button>
@@ -279,12 +347,13 @@ export default function TimesheetApp({
           >
             {weeks.length === 0 && <option value={selectedWeek}>This week (new)</option>}
             {weeks.map((w) => (
-              <option key={w} value={w}>
-                Week of {weekLabel(w)}
+              <option key={w.week_start} value={w.week_start}>
+                Week of {weekLabel(w.week_start)}
+                {w.submitted_at ? " ✓" : ""}
               </option>
             ))}
           </select>
-          {canEdit && (
+          {!isBoss && (
             <button className="btn btn-small" onClick={newWeek} disabled={busy}>
               + New
             </button>
@@ -303,7 +372,7 @@ export default function TimesheetApp({
           <aside className="weeklist no-print">
             <div className="weeklist-head">
               <span>Time sheets</span>
-              {canEdit && (
+              {!isBoss && (
                 <button className="btn btn-small" onClick={newWeek} disabled={busy}>
                   + New
                 </button>
@@ -313,18 +382,23 @@ export default function TimesheetApp({
               {weeks.length === 0 && (
                 <div className="weeklist-empty">
                   No timesheets yet.
-                  {canEdit ? ' Tap "+ New" to start one.' : ""}
+                  {!isBoss ? ' Tap "+ New" to start one.' : ""}
                 </div>
               )}
               {weeks.map((w) => (
                 <button
-                  key={w}
-                  className={"weeklist-item" + (w === selectedWeek ? " active" : "")}
-                  onClick={() => selectWeek(w)}
+                  key={w.week_start}
+                  className={
+                    "weeklist-item" + (w.week_start === selectedWeek ? " active" : "")
+                  }
+                  onClick={() => selectWeek(w.week_start)}
                   disabled={busy}
                 >
-                  <span className="weeklist-week">Week of</span>
-                  <span className="weeklist-date">{weekLabel(w)}</span>
+                  <span className="weeklist-week">
+                    Week of
+                    {w.submitted_at && <span className="weeklist-check">✓</span>}
+                  </span>
+                  <span className="weeklist-date">{weekLabel(w.week_start)}</span>
                 </button>
               ))}
             </div>
@@ -342,6 +416,10 @@ export default function TimesheetApp({
                     Reg {fmt(totals.reg)} · OT {fmt(totals.ot)} · DT {fmt(totals.dt)}
                   </span>
                 )}
+                {submittedAt && <span className="submitted-chip">✓ Submitted</span>}
+                {!submittedAt && locked && (
+                  <span className="locked-chip">Locked — deadline passed</span>
+                )}
                 {dirty && <span className="badge-dirty">Unsaved changes</span>}
                 {status && <span className="status">{status}</span>}
               </div>
@@ -349,18 +427,30 @@ export default function TimesheetApp({
                 <button className="btn" onClick={() => window.print()}>
                   Download / Print
                 </button>
-                {canEdit && (
+                {!isBoss && owner.id && (
                   <>
-                    <button className="btn hide-mobile" onClick={() => addRows(5)} disabled={busy}>
-                      + 5 rows
-                    </button>
-                    <button
-                      className="btn btn-primary hide-mobile"
-                      onClick={save}
-                      disabled={busy || !dirty}
-                    >
-                      Save
-                    </button>
+                    {!locked && (
+                      <>
+                        <button className="btn hide-mobile" onClick={() => addRows(5)} disabled={busy}>
+                          + 5 rows
+                        </button>
+                        <button
+                          className="btn btn-primary hide-mobile"
+                          onClick={save}
+                          disabled={busy || !dirty}
+                        >
+                          Save
+                        </button>
+                        <button
+                          className="btn btn-submit"
+                          onClick={submit}
+                          disabled={busy}
+                          title="Submit this timesheet — locks it from further edits"
+                        >
+                          Submit
+                        </button>
+                      </>
+                    )}
                     <button className="btn btn-danger" onClick={removeWeek} disabled={busy}>
                       Delete week
                     </button>
@@ -383,15 +473,19 @@ export default function TimesheetApp({
               editable={canEdit}
               onEmployeeChange={updateEmployee}
               onCellChange={updateCell}
+              statusInfo={statusInfo}
             />
           </section>
         </div>
       )}
 
-      {canEdit && (
+      {!isBoss && hasSheet && !locked && (
         <div className="mobile-actionbar no-print">
           <button className="btn" onClick={() => window.print()}>
             Print
+          </button>
+          <button className="btn btn-submit-mobile" onClick={submit} disabled={busy}>
+            Submit
           </button>
           <button
             className="btn btn-primary actionbar-save"
@@ -399,6 +493,13 @@ export default function TimesheetApp({
             disabled={busy || !dirty}
           >
             {busy ? "Saving…" : dirty ? "Save changes" : "Saved"}
+          </button>
+        </div>
+      )}
+      {!isBoss && hasSheet && locked && (
+        <div className="mobile-actionbar no-print">
+          <button className="btn actionbar-save" onClick={() => window.print()}>
+            Print
           </button>
         </div>
       )}
@@ -418,6 +519,8 @@ export default function TimesheetApp({
           onRemoved={handleRemoved}
         />
       )}
+
+      {isBoss && <TeamStatus open={showStatus} onClose={() => setShowStatus(false)} />}
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { getUser, getTimesheet } from "@/lib/db";
+import { isLocked } from "@/lib/lock";
 
 export async function GET(request) {
   const { userId } = await auth();
@@ -21,5 +22,15 @@ export async function GET(request) {
   }
 
   const sheet = await getTimesheet(owner, week);
-  return Response.json(sheet || { week_start: week, employee: "", data: [] });
+  if (!sheet) {
+    return Response.json({
+      week_start: week,
+      employee: "",
+      data: [],
+      created_at: null,
+      submitted_at: null,
+      locked: false,
+    });
+  }
+  return Response.json({ ...sheet, locked: isLocked(week, sheet.submitted_at) });
 }

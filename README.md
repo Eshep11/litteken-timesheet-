@@ -117,6 +117,28 @@ employee's hours). Use the **Manage team** button to:
 
 ---
 
+## Submitting and locking time sheets
+
+To keep every time sheet an honest, unaltered record, employees submit their
+own hours — and once submitted, that week locks and can't be edited by anyone,
+including managers (who are always view-only).
+
+- **Submit** — a small button (separate from Save) that locks the week going
+  forward. It asks for confirmation first, so it can't be tapped by accident.
+- **Automatic deadline** — even if an employee never hits Submit, a week
+  automatically locks after its deadline: the **Wednesday of the following
+  week**. Example: the week of Mon Jul 6–Sun Jul 12 stays editable through end
+  of day Wed Jul 15, then locks on its own.
+- **Timestamps** — every sheet shows when it was **created**, last **updated**,
+  and (if applicable) **submitted**. Managers can use this to confirm a sheet
+  wasn't deleted and quietly recreated later.
+- **Accidental submit?** Delete is still allowed even on a locked/submitted
+  week — that's the intentional recovery path. Deleting and starting over
+  still shows a fresh "Created" time, so it's visible, not hidden.
+- **Weekly status (manager view)** — pick a week and see who has and hasn't
+  submitted yet, so you know who to remind. Managers are never included in
+  this list.
+
 ## Managing your team
 
 **Change a code:** update `EMPLOYEE_CODE` or `BOSS_CODE` in Vercel → Settings →

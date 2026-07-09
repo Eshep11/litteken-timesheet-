@@ -863,3 +863,87 @@ col.c-pmeth {
   white-space: nowrap;
   min-width: 0;
 }
+
+/* ═══════════════════════════════════════════════════════
+   SUBMIT / LOCK / STATUS
+   ═══════════════════════════════════════════════════════ */
+
+/* Submit button: intentionally small/quiet, not a big primary action.
+   The real safety net is the confirm dialog, but visual weight matters too. */
+.btn-submit {
+  border-color: #c7d2e0;
+  color: var(--blue);
+  background: #f5f8fc;
+  font-size: 12px;
+  padding: 6px 12px;
+  min-height: 34px;
+}
+.btn-submit:hover:not(:disabled) { background: #eaf1f9; }
+
+.submitted-chip {
+  font-size: 12px;
+  font-weight: 600;
+  color: #166534;
+  background: #ecfdf3;
+  border: 1px solid #bbe5c8;
+  border-radius: 999px;
+  padding: 2px 10px;
+}
+.locked-chip {
+  font-size: 12px;
+  font-weight: 600;
+  color: #92400e;
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+  border-radius: 999px;
+  padding: 2px 10px;
+}
+
+.status-line {
+  font-size: 11px;
+  color: var(--muted);
+  margin: 2px 0 8px;
+}
+.status-line-submitted { color: #166534; font-weight: 600; }
+.status-line-locked { color: #92400e; font-weight: 600; }
+
+.weeklist-check {
+  color: #166534;
+  font-weight: 700;
+  margin-left: 6px;
+}
+
+/* ── Weekly status modal ── */
+.status-week-picker {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.status-week-picker .date-input { flex: 1; margin-top: 0; }
+.status-pill {
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 3px 10px;
+  white-space: nowrap;
+}
+.status-pending { background: #fef3c7; color: #92400e; }
+.status-done { background: #ecfdf3; color: #166534; }
+
+/* Mobile: give the small Submit button its own comfortable but modest slot
+   in the sticky bar — not full-width like Save, so it can't be hit by a
+   careless swipe the way a big button could. */
+.btn-submit-mobile {
+  border-color: #c7d2e0;
+  color: var(--blue);
+  background: #f5f8fc;
+  min-height: 46px;
+  padding: 0 14px;
+  font-size: 13px;
+  flex: 0 0 auto;
+}
+
+@media screen and (max-width: 800px) {
+  .btn-submit { min-height: 40px; font-size: 13px; }
+}

@@ -8,6 +8,7 @@ export default function TimesheetGrid({
   editable,
   onEmployeeChange,
   onCellChange,
+  statusInfo,
 }) {
   return (
     <div className="sheet" id="printable">
@@ -48,6 +49,23 @@ export default function TimesheetGrid({
           onChange={(e) => onEmployeeChange(e.target.value)}
         />
       </div>
+
+      {statusInfo && (statusInfo.createdLabel || statusInfo.submittedLabel) && (
+        <div className="status-line no-print">
+          {statusInfo.createdLabel && <span>Created {statusInfo.createdLabel}</span>}
+          {statusInfo.submittedLabel && (
+            <span className="status-line-submitted">
+              · Submitted {statusInfo.submittedLabel}
+            </span>
+          )}
+          {!statusInfo.submittedLabel && statusInfo.locked && (
+            <span className="status-line-locked">· Locked (deadline passed)</span>
+          )}
+          {!statusInfo.submittedLabel && !statusInfo.locked && statusInfo.deadlineText && (
+            <span> · Editable through {statusInfo.deadlineText}</span>
+          )}
+        </div>
+      )}
 
       <div className="notice">
         **Prior to arriving on a job site for the 1st time or when filling out

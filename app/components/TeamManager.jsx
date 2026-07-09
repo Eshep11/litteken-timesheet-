@@ -50,7 +50,7 @@ export default function TeamManager({ open, employees, onClose, onRemoved }) {
           : "Then you can fill out your weekly time sheets from your phone or computer.";
       const homeScreenTip =
         `Tip: Tap the Share button and choose "Add to Home Screen" to add ` +
-        `your timesheets as an app to your home screen.`;
+        `your timesheets as an app on your phone.`;
       const message =
         `You've been invited to the Litteken Plumbing time sheet app.\n\n` +
         `1. Open this link: ${origin}/sign-up\n` +
