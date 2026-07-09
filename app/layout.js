@@ -6,8 +6,8 @@ export const metadata = {
   description: "Weekly employee time sheets for Litteken Plumbing Co., Inc.",
   manifest: "/manifest.json",
   icons: {
-    icon: "/icon-192.png",
-    apple: "/apple-touch-icon.png",
+    icon: "/icon-v2-192.png",
+    apple: "/apple-touch-icon-v2.png",
   },
   appleWebApp: {
     capable: true,

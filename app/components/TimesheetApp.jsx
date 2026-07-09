@@ -12,13 +12,14 @@ import {
   formatDateTime,
   deadlineLabel,
 } from "@/lib/dates";
-import { isLocked } from "@/lib/lock";
+import { isLocked, isPastDeadline } from "@/lib/lock";
 import { emptyRows, emptyRow, isRowEmpty } from "@/lib/rows";
 import {
   saveTimesheet,
   createWeekAction,
   deleteWeekAction,
   submitTimesheetAction,
+  sendBackAction,
 } from "@/app/actions";
 
 export default function TimesheetApp({
@@ -91,7 +92,7 @@ export default function TimesheetApp({
   async function selectEmployee(empId) {
     const emp = employeeList.find((e) => e.clerk_id === empId);
     if (!emp || emp.clerk_id === owner.id) return;
-    if (dirty && !confirm("You have unsaved changes. Switch anyway?")) return;
+    if (!(await handleLeavingCurrentSheet())) return;
     setBusy(true);
     setStatus("");
     try {
@@ -132,10 +133,38 @@ export default function TimesheetApp({
     }
   }
 
+  // ── Boss: an employee's name was corrected ──
+  function handleRenamed(id, newName) {
+    setEmployeeList((list) =>
+      list.map((e) => (e.clerk_id === id ? { ...e, name: newName } : e))
+    );
+    if (owner.id === id) {
+      setOwner((o) => ({ ...o, name: newName }));
+    }
+  }
+
+  // Before navigating away from the current sheet (switching week or
+  // employee), make sure nothing is lost. If the current viewer can edit
+  // and has unsaved changes, save for real rather than just warning. Only
+  // falls back to "discard?" if that save fails (e.g. offline).
+  // Returns true if it's safe to proceed with the navigation.
+  async function handleLeavingCurrentSheet() {
+    if (!dirty) return true;
+    if (canEdit) {
+      setStatus("Saving…");
+      const ok = await saveNow();
+      if (ok) return true;
+      return confirm(
+        "Could not save your changes (check your connection). Switch anyway and lose them?"
+      );
+    }
+    return confirm("You have unsaved changes. Switch anyway?");
+  }
+
   // ── Load a different week ──
   async function selectWeek(week) {
     if (week === selectedWeek || !owner.id) return;
-    if (dirty && !confirm("You have unsaved changes. Switch weeks anyway?")) return;
+    if (!(await handleLeavingCurrentSheet())) return;
     setBusy(true);
     setStatus("");
     try {
@@ -170,11 +199,10 @@ export default function TimesheetApp({
     setDirty(true);
   }
 
-  // ── Save ──
-  async function save() {
-    if (!owner.id || locked) return;
-    setBusy(true);
-    setStatus("Saving…");
+  // ── Save (core; returns true/false so callers — the button and the
+  // auto-save-before-switching path — can react without duplicating logic) ──
+  async function saveNow() {
+    if (!owner.id || locked) return false;
     try {
       await saveTimesheet(owner.id, owner.name, selectedWeek, employee, rows);
       if (!weeks.some((w) => w.week_start === selectedWeek)) {
@@ -182,33 +210,42 @@ export default function TimesheetApp({
       }
       if (!createdAt) setCreatedAt(new Date().toISOString());
       setDirty(false);
-      setStatus("Saved.");
-      setTimeout(() => setStatus(""), 2000);
+      return true;
     } catch {
-      setStatus("Save failed — are you still signed in?");
-    } finally {
-      setBusy(false);
+      return false;
     }
+  }
+
+  async function save() {
+    setBusy(true);
+    setStatus("Saving…");
+    const ok = await saveNow();
+    setStatus(ok ? "Saved." : "Save failed — are you still signed in?");
+    setBusy(false);
+    if (ok) setTimeout(() => setStatus(""), 2000);
   }
 
   // ── Submit (locks the sheet) ──
   async function submit() {
     if (!owner.id || locked) return;
-    if (
-      !confirm(
-        "Submit this timesheet? You won't be able to edit it after this.\n\n" +
-          "(If you submit by mistake, you can still delete the week and start over.)"
-      )
-    ) {
-      return;
-    }
+    const noHours = totals.reg === 0 && totals.ot === 0 && totals.dt === 0;
+    const message = noHours
+      ? "This timesheet has no hours entered. Submit anyway? You won't be able to edit it after this.\n\n" +
+        "(If you submit by mistake, you can still delete the week and start over.)"
+      : "Submit this timesheet? You won't be able to edit it after this.\n\n" +
+        "(If you submit by mistake, you can still delete the week and start over.)";
+    if (!confirm(message)) return;
     setBusy(true);
     setStatus("");
     try {
       // Make sure the latest edits are saved before locking them in.
       if (dirty) {
-        await saveTimesheet(owner.id, owner.name, selectedWeek, employee, rows);
-        setDirty(false);
+        const ok = await saveNow();
+        if (!ok) {
+          setStatus("Could not save your changes — try again before submitting.");
+          setBusy(false);
+          return;
+        }
       }
       await submitTimesheetAction(owner.id, selectedWeek);
       const nowIso = new Date().toISOString();
@@ -226,6 +263,37 @@ export default function TimesheetApp({
       setTimeout(() => setStatus(""), 2500);
     } catch {
       setStatus("Could not submit. Are you still signed in?");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // ── Manager: send a submitted sheet back for edits ──
+  async function sendBack() {
+    if (!isBoss || !owner.id || !submittedAt) return;
+    const deadlinePassed = isPastDeadline(selectedWeek);
+    const warn = deadlinePassed
+      ? `Send ${owner.name}'s timesheet back for edits? Note: this week's deadline has already passed, so let them know right away if they need to fix something.`
+      : `Send ${owner.name}'s timesheet back for edits? They'll be able to make changes and re-submit.`;
+    if (!confirm(warn)) return;
+    setBusy(true);
+    setStatus("");
+    try {
+      const res = await sendBackAction(owner.id, selectedWeek);
+      setSubmittedAt(null);
+      setWeeks((w) =>
+        w.map((wk) =>
+          wk.week_start === selectedWeek ? { ...wk, submitted_at: null } : wk
+        )
+      );
+      setStatus(
+        res.stillLocked
+          ? "Sent back, but the deadline has passed — follow up with them soon."
+          : "Sent back for edits."
+      );
+      setTimeout(() => setStatus(""), 4000);
+    } catch {
+      setStatus("Could not send back. Are you still signed in?");
     } finally {
       setBusy(false);
     }
@@ -427,6 +495,16 @@ export default function TimesheetApp({
                 <button className="btn" onClick={() => window.print()}>
                   Download / Print
                 </button>
+                {isBoss && owner.id && submittedAt && (
+                  <button
+                    className="btn btn-small"
+                    onClick={sendBack}
+                    disabled={busy}
+                    title="Unlocks this week so the employee can fix and re-submit it"
+                  >
+                    Send back for edits
+                  </button>
+                )}
                 {!isBoss && owner.id && (
                   <>
                     {!locked && (
@@ -464,6 +542,7 @@ export default function TimesheetApp({
                 View only — you're reviewing {owner.name}&apos;s timesheet. Only
                 the employee can edit their own hours. You can print or download
                 it.
+                {submittedAt && ' Use "Send back for edits" if they need to fix something.'}
               </div>
             )}
 
@@ -517,6 +596,7 @@ export default function TimesheetApp({
           employees={employeeList}
           onClose={() => setShowTeam(false)}
           onRemoved={handleRemoved}
+          onRenamed={handleRenamed}
         />
       )}
 

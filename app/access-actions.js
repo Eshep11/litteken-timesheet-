@@ -22,6 +22,15 @@ export async function submitAccessCode(_prevState, formData) {
   const code = String(formData.get("code") || "").trim();
 
   if (!name) return { ok: false, error: "Please enter your name." };
+  // Require something that actually looks like a name: at least 2
+  // characters and at least one letter, so a manager doesn't end up with
+  // "asdf" or "1" in their employee list.
+  if (name.length < 2 || !/[a-zA-Z]/.test(name)) {
+    return { ok: false, error: "Please enter your full name." };
+  }
+  if (name.length > 60) {
+    return { ok: false, error: "That name is too long." };
+  }
 
   const employeeCode = process.env.EMPLOYEE_CODE || "";
   const bossCode = process.env.BOSS_CODE || "";

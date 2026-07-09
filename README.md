@@ -135,11 +135,20 @@ including managers (who are always view-only).
 - **Accidental submit?** Delete is still allowed even on a locked/submitted
   week — that's the intentional recovery path. Deleting and starting over
   still shows a fresh "Created" time, so it's visible, not hidden.
+- **Send back for edits (manager)** — while reviewing a submitted sheet, a
+  manager can click "Send back for edits" to unlock it so the employee can
+  fix a mistake and re-submit. The manager still never edits the content
+  themselves. Note: if the Wednesday deadline has already passed, the sheet
+  re-locks from the deadline rule regardless — the app tells the manager
+  when that's the case so they can follow up right away.
 - **Weekly status (manager view)** — pick a week and see who has and hasn't
   submitted yet, so you know who to remind. Managers are never included in
   this list.
 
 ## Managing your team
+
+**Fix a misspelled or wrong name:** open Manage team and click "Edit name"
+next to that person — no database access needed.
 
 **Change a code:** update `EMPLOYEE_CODE` or `BOSS_CODE` in Vercel → Settings →
 Environment Variables, then Redeploy. (People already signed in stay in; the new

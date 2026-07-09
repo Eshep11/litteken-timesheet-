@@ -8,8 +8,9 @@ import {
   createWeek as dbCreateWeek,
   deleteWeek as dbDeleteWeek,
   submitTimesheet as dbSubmitTimesheet,
+  unsubmitTimesheet as dbUnsubmitTimesheet,
 } from "@/lib/db";
-import { isLocked } from "@/lib/lock";
+import { isLocked, isPastDeadline } from "@/lib/lock";
 import { revalidatePath } from "next/cache";
 
 // Work out who's calling and whether they may WRITE to `ownerId`'s sheets.
@@ -74,4 +75,25 @@ export async function submitTimesheetAction(ownerId, weekStart) {
   await dbSubmitTimesheet(ownerId, weekStart);
   revalidatePath("/");
   return { ok: true };
+}
+
+// Manager "send back for edits" — clears the submitted flag so the employee
+// can fix and re-submit their sheet. Manager-only; the manager still never
+// edits the content themselves, this just hands editing back to the
+// employee. If the Wednesday deadline has already passed, the sheet will
+// immediately re-lock from the deadline rule regardless — we report that
+// back so the manager knows to follow up with the employee right away.
+export async function sendBackAction(ownerId, weekStart) {
+  const { userId } = await auth();
+  if (!userId) throw new Error("Not signed in");
+  const me = await getUser(userId);
+  if (!me || me.role !== "boss") throw new Error("Not authorized");
+
+  const existing = await getTimesheet(ownerId, weekStart);
+  if (!existing || !existing.submitted_at) {
+    return { ok: true, alreadyUnlocked: true, stillLocked: false };
+  }
+  await dbUnsubmitTimesheet(ownerId, weekStart);
+  revalidatePath("/");
+  return { ok: true, stillLocked: isPastDeadline(weekStart) };
 }

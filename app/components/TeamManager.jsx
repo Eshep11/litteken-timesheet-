@@ -1,13 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { removeEmployee, getAccessCode } from "@/app/team-actions";
+import { removeEmployee, getAccessCode, renameEmployee } from "@/app/team-actions";
 
-export default function TeamManager({ open, employees, onClose, onRemoved }) {
+export default function TeamManager({ open, employees, onClose, onRemoved, onRenamed }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [invite, setInvite] = useState(null); // { role, message }
   const [copied, setCopied] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [editValue, setEditValue] = useState("");
 
   if (!open) return null;
 
@@ -26,6 +28,33 @@ export default function TeamManager({ open, employees, onClose, onRemoved }) {
       onRemoved(emp.clerk_id);
     } catch {
       setError("Could not remove that person. Are you still signed in?");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function startEdit(emp) {
+    setError("");
+    setEditingId(emp.clerk_id);
+    setEditValue(emp.name);
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setEditValue("");
+  }
+
+  async function saveEdit(emp) {
+    const name = editValue.trim();
+    setBusy(true);
+    setError("");
+    try {
+      await renameEmployee(emp.clerk_id, name);
+      onRenamed(emp.clerk_id, name);
+      setEditingId(null);
+      setEditValue("");
+    } catch (e) {
+      setError(e?.message || "Could not update that name.");
     } finally {
       setBusy(false);
     }
@@ -131,17 +160,52 @@ export default function TeamManager({ open, employees, onClose, onRemoved }) {
             <ul className="team-list">
               {employees.map((e) => (
                 <li key={e.clerk_id} className="team-item">
-                  <div className="team-person">
-                    <span className="team-name">{e.name}</span>
-                    <span className="team-email">{e.email}</span>
-                  </div>
-                  <button
-                    className="btn btn-danger btn-small"
-                    onClick={() => handleRemove(e)}
-                    disabled={busy}
-                  >
-                    Remove
-                  </button>
+                  {editingId === e.clerk_id ? (
+                    <>
+                      <input
+                        type="text"
+                        className="rename-input"
+                        value={editValue}
+                        onChange={(ev) => setEditValue(ev.target.value)}
+                        autoFocus
+                      />
+                      <div className="rename-actions">
+                        <button
+                          className="btn btn-primary btn-small"
+                          onClick={() => saveEdit(e)}
+                          disabled={busy}
+                        >
+                          Save
+                        </button>
+                        <button className="btn btn-small" onClick={cancelEdit} disabled={busy}>
+                          Cancel
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="team-person">
+                        <span className="team-name">{e.name}</span>
+                        <span className="team-email">{e.email}</span>
+                      </div>
+                      <div className="team-item-actions">
+                        <button
+                          className="btn btn-small"
+                          onClick={() => startEdit(e)}
+                          disabled={busy}
+                        >
+                          Edit name
+                        </button>
+                        <button
+                          className="btn btn-danger btn-small"
+                          onClick={() => handleRemove(e)}
+                          disabled={busy}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </li>
               ))}
             </ul>

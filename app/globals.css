@@ -947,3 +947,29 @@ col.c-pmeth {
 @media screen and (max-width: 800px) {
   .btn-submit { min-height: 40px; font-size: 13px; }
 }
+
+/* ── Inline employee rename ── */
+.rename-input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid #cfd4da;
+  border-radius: 6px;
+  padding: 7px 10px;
+  font-size: 14px;
+  font-family: inherit;
+}
+.rename-input:focus { border-color: var(--blue); outline: none; }
+.rename-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.team-item-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+@media screen and (max-width: 800px) {
+  .team-item { flex-wrap: wrap; }
+  .rename-input { width: 100%; }
+}
