@@ -387,13 +387,28 @@ body {
   color: #fff;
   font-size: 9px;
   text-align: center;
-  padding: 3px 4px;
+  padding: 3px 6px;
   letter-spacing: 0.3px;
   margin: 8px 0;
   border-radius: 2px;
+  /* Flex + wrap is load-bearing, not cosmetic.
+     These eight service names are adjacent <span>s, and JSX strips the
+     whitespace between them — so as plain inline text the browser has NO
+     break opportunity anywhere in the bar. Each span is also nowrap. The
+     result was a single unbreakable ~750px line that forced the whole
+     document wider than a phone screen, which made iOS shrink the entire
+     page to fit (the "zoomed out on mobile" bug).
+     As flex items they can wrap between names. On a wide screen it still
+     fits on one line, so desktop and print look unchanged; it only wraps
+     when it genuinely has to. */
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 2px 10px;
 }
 .services-bar span {
-  margin: 0 4px;
+  margin: 0;
   white-space: nowrap;
 }
 .services-bar span::before {
@@ -571,6 +586,14 @@ col.c-pmeth {
 
 @media screen and (max-width: 800px) {
   html, body { font-size: 15px; }
+
+  /* Safety net: if anything ever ends up wider than the screen again, clip
+     it rather than let it widen the document — a document wider than the
+     viewport is what makes iOS shrink (zoom out) the whole page. Scoped to
+     mobile on purpose: on desktop this would break the sticky week list,
+     and that sidebar is hidden on phones anyway. */
+  html, body { overflow-x: hidden; }
+
   .app { padding: 10px; }
 
   /* Top bar */
@@ -673,7 +696,11 @@ col.c-pmeth {
 .entry-card .field textarea:read-only { background: #f3f5f7; }
 
 .field-group { display: flex; gap: 10px; }
-.field-group .field { flex: 1; }
+/* min-width: 0 is required. A flex item defaults to min-width:auto, which
+   means it will not shrink below the intrinsic width of its content — and
+   an <input> has a fairly wide intrinsic width. Without this, three inputs
+   in a row can refuse to shrink and push the page wider than the screen. */
+.field-group .field { flex: 1; min-width: 0; }
 .hours-group .field input { text-align: center; }
 
 /* ── Sticky bottom action bar (phones) ── */
