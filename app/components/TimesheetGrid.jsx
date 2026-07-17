@@ -149,7 +149,7 @@ export default function TimesheetGrid({
             </thead>
             <tbody>
               {rows.map((row, i) => (
-                <tr key={i}>
+                <tr key={i} className={isRowEmpty(row) ? "r-blank" : undefined}>
                   <td><Cell v={row.date} ro={!editable} onChange={(x) => onCellChange(i, "date", x)} /></td>
                   <td><Cell v={row.contractor} ro={!editable} align="left" onChange={(x) => onCellChange(i, "contractor", x)} /></td>
                   <td><Cell v={row.job} ro={!editable} align="left" onChange={(x) => onCellChange(i, "job", x)} /></td>

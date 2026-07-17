@@ -548,6 +548,8 @@ col.c-pmeth {
   html,
   body {
     background: #fff;
+    height: auto;
+    margin: 0;
   }
   .app {
     max-width: none;
@@ -562,7 +564,20 @@ col.c-pmeth {
   .sheet {
     border: none;
     border-radius: 0;
-    padding: 0.35in 0.4in;
+    /* No padding here: the browser's print dialog already adds its own page
+       margins (~0.5in in Safari/Chrome). Our old 0.35in padding stacked on
+       top of those, and the combined height pushed the sheet a sliver past
+       one page — which printed as a blank second page. */
+    padding: 0;
+  }
+  /* Cap how many EMPTY trailing rows print. On screen the grid auto-grows
+     a blank row as you type, so a busy week can quietly reach 25+ rows —
+     taller than one page, and the overflow is all blank lines (the "blank
+     sheet" second page). Filled rows are never hidden; a genuinely full
+     sheet still paginates normally. 18 blanks keeps the paper-form look
+     while guaranteeing the default sheet fits one page. */
+  tbody tr.r-blank:nth-child(n + 19) {
+    display: none;
   }
   .grid-scroll {
     overflow: visible;
@@ -1056,5 +1071,10 @@ col.c-pmeth {
   .btn-duplicate { min-height: 36px; }
 }
 @media print {
-  .photo-sheet img { border: none; border-radius: 0; max-height: 9in; }
+  /* 6.8in leaves room for the letterhead (~2.2in) on the SAME page inside
+     the browser's ~9.5in usable print area. At 9in the photo couldn't fit
+     under the header, so Safari pushed the whole (unbreakable) image to
+     page 2 — leaving page 1 as a lonely "template" and a spill page 3. */
+  .photo-sheet img { border: none; border-radius: 0; max-height: 6.8in; }
+  .photo-sheet { page-break-inside: avoid; }
 }
