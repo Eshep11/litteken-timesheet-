@@ -11,6 +11,7 @@ import {
   todayLocal,
   formatDateTime,
   deadlineLabel,
+  bumpDate,
 } from "@/lib/dates";
 import { isLocked, isPastDeadline } from "@/lib/lock";
 import { emptyRows, emptyRow, isRowEmpty } from "@/lib/rows";
@@ -20,6 +21,8 @@ import {
   deleteWeekAction,
   submitTimesheetAction,
   sendBackAction,
+  savePhotoAction,
+  clearPhotoAction,
 } from "@/app/actions";
 
 export default function TimesheetApp({
@@ -45,6 +48,7 @@ export default function TimesheetApp({
   );
   const [createdAt, setCreatedAt] = useState(initialSheet.created_at || null);
   const [submittedAt, setSubmittedAt] = useState(initialSheet.submitted_at || null);
+  const [photo, setPhoto] = useState(initialSheet.photo || null);
   const [dirty, setDirty] = useState(false);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
@@ -86,6 +90,7 @@ export default function TimesheetApp({
     setRows(sheet.data && sheet.data.length ? sheet.data : emptyRows(20));
     setCreatedAt(sheet.created_at || null);
     setSubmittedAt(sheet.submitted_at || null);
+    setPhoto(sheet.photo || null);
   }
 
   // ── Boss: switch which employee we're viewing ──
@@ -199,6 +204,106 @@ export default function TimesheetApp({
     setDirty(true);
   }
 
+  // ── Duplicate an entry (for multi-day jobs) ──
+  // Copies entry i into a new entry right after it, with the date bumped
+  // forward one day ("7/6" -> "7/7", month rollover handled). Everything
+  // else — contractor, job, hours, description, payment — carries over.
+  function duplicateEntry(i) {
+    setRows((prev) => {
+      const src = prev[i];
+      if (!src) return prev;
+      const copy = { ...src, date: bumpDate(src.date) };
+      const next = [...prev.slice(0, i + 1), copy, ...prev.slice(i + 1)];
+      if (!isRowEmpty(next[next.length - 1])) next.push(emptyRow());
+      return next;
+    });
+    setDirty(true);
+    setStatus("Entry duplicated.");
+    setTimeout(() => setStatus(""), 2000);
+  }
+
+  // Desktop convenience: duplicate the last filled entry.
+  function duplicateLast() {
+    let last = -1;
+    rows.forEach((r, i) => {
+      if (!isRowEmpty(r)) last = i;
+    });
+    if (last >= 0) duplicateEntry(last);
+  }
+
+  // ── Photo timesheet upload ──
+  // Shrink the photo on the phone before sending: big camera photos are
+  // 3–8MB, which is slow on jobsite signal and heavy for the database.
+  // Resized to max 1600px JPEG it's typically 200–400KB and still easily
+  // readable. Runs entirely in the browser via a canvas.
+  function compressImage(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error("read failed"));
+      reader.onload = () => {
+        const img = new Image();
+        img.onerror = () => reject(new Error("not an image"));
+        img.onload = () => {
+          const MAX = 1600;
+          let { width, height } = img;
+          if (width > MAX || height > MAX) {
+            const scale = MAX / Math.max(width, height);
+            width = Math.round(width * scale);
+            height = Math.round(height * scale);
+          }
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+          canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL("image/jpeg", 0.72));
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function handlePhotoPicked(e) {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = ""; // allow re-picking the same file later
+    if (!file || !owner.id || locked) return;
+    setBusy(true);
+    setStatus("Uploading photo…");
+    try {
+      const dataUrl = await compressImage(file);
+      await savePhotoAction(owner.id, owner.name, selectedWeek, dataUrl);
+      setPhoto(dataUrl);
+      if (!weeks.some((w) => w.week_start === selectedWeek)) {
+        setWeeks((w) => [{ week_start: selectedWeek, submitted_at: null }, ...w]);
+      }
+      if (!createdAt) setCreatedAt(new Date().toISOString());
+      setDirty(false);
+      setStatus("Photo saved as this week's timesheet.");
+      setTimeout(() => setStatus(""), 3000);
+    } catch {
+      setStatus("Could not save that photo — try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function removePhoto() {
+    if (!owner.id || locked || !photo) return;
+    if (!confirm("Remove the photo and fill out the timesheet manually instead?")) return;
+    setBusy(true);
+    setStatus("");
+    try {
+      await clearPhotoAction(owner.id, selectedWeek);
+      setPhoto(null);
+      setStatus("Photo removed.");
+      setTimeout(() => setStatus(""), 2000);
+    } catch {
+      setStatus("Could not remove the photo.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   // ── Save (core; returns true/false so callers — the button and the
   // auto-save-before-switching path — can react without duplicating logic) ──
   async function saveNow() {
@@ -228,7 +333,7 @@ export default function TimesheetApp({
   // ── Submit (locks the sheet) ──
   async function submit() {
     if (!owner.id || locked) return;
-    const noHours = totals.reg === 0 && totals.ot === 0 && totals.dt === 0;
+    const noHours = !photo && totals.reg === 0 && totals.ot === 0 && totals.dt === 0;
     const message = noHours
       ? "This timesheet has no hours entered. Submit anyway? You won't be able to edit it after this.\n\n" +
         "(If you submit by mistake, you can still delete the week and start over.)"
@@ -509,9 +614,17 @@ export default function TimesheetApp({
                   <>
                     {!locked && (
                       <>
-                        <button className="btn hide-mobile" onClick={() => addRows(5)} disabled={busy}>
-                          + 5 rows
-                        </button>
+                        {!photo && (
+                          <>
+                            <button className="btn hide-mobile" onClick={duplicateLast} disabled={busy}
+                              title="Copy the last entry to a new one with the next day's date">
+                              Duplicate last entry
+                            </button>
+                            <button className="btn hide-mobile" onClick={() => addRows(5)} disabled={busy}>
+                              + 5 rows
+                            </button>
+                          </>
+                        )}
                         <button
                           className="btn btn-primary hide-mobile"
                           onClick={save}
@@ -546,13 +659,42 @@ export default function TimesheetApp({
               </div>
             )}
 
+            {/* ── Photo timesheet controls (employee, unlocked) ── */}
+            {!isBoss && owner.id && !locked && (
+              <div className="photo-row no-print">
+                {!photo ? (
+                  <label className="btn photo-upload-btn">
+                    📷 Use a photo instead
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handlePhotoPicked}
+                      hidden
+                    />
+                  </label>
+                ) : (
+                  <button className="btn" onClick={removePhoto} disabled={busy}>
+                    Remove photo &amp; fill out manually
+                  </button>
+                )}
+                {!photo && (
+                  <span className="photo-hint">
+                    Snap a picture of a paper timesheet — it becomes your sheet
+                    for this week.
+                  </span>
+                )}
+              </div>
+            )}
+
             <TimesheetGrid
               employee={employee}
               rows={rows}
               editable={canEdit}
               onEmployeeChange={updateEmployee}
               onCellChange={updateCell}
+              onDuplicate={duplicateEntry}
               statusInfo={statusInfo}
+              photo={photo}
             />
           </section>
         </div>

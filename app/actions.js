@@ -9,6 +9,8 @@ import {
   deleteWeek as dbDeleteWeek,
   submitTimesheet as dbSubmitTimesheet,
   unsubmitTimesheet as dbUnsubmitTimesheet,
+  setPhoto as dbSetPhoto,
+  clearPhoto as dbClearPhoto,
 } from "@/lib/db";
 import { isLocked, isPastDeadline } from "@/lib/lock";
 import { revalidatePath } from "next/cache";
@@ -96,4 +98,40 @@ export async function sendBackAction(ownerId, weekStart) {
   await dbUnsubmitTimesheet(ownerId, weekStart);
   revalidatePath("/");
   return { ok: true, stillLocked: isPastDeadline(weekStart) };
+}
+
+// ── Photo timesheets ──
+// An employee can upload a photo of a paper timesheet instead of filling
+// out the grid. The photo simply becomes their timesheet for that week.
+// Same rules as editing: only the owner, and only while unlocked.
+
+const MAX_PHOTO_CHARS = 3_500_000; // ~2.6MB of image as a data URL
+
+export async function savePhotoAction(ownerId, ownerName, weekStart, photoDataUrl) {
+  await authorizeFor(ownerId);
+  const existing = await getTimesheet(ownerId, weekStart);
+  if (existing && isLocked(weekStart, existing.submitted_at)) {
+    throw new Error("This timesheet is locked and can no longer be changed.");
+  }
+  const photo = String(photoDataUrl || "");
+  if (!photo.startsWith("data:image/")) {
+    throw new Error("That file doesn't look like a photo.");
+  }
+  if (photo.length > MAX_PHOTO_CHARS) {
+    throw new Error("That photo is too large — please try again.");
+  }
+  await dbSetPhoto(ownerId, ownerName, weekStart, photo);
+  revalidatePath("/");
+  return { ok: true };
+}
+
+export async function clearPhotoAction(ownerId, weekStart) {
+  await authorizeFor(ownerId);
+  const existing = await getTimesheet(ownerId, weekStart);
+  if (existing && isLocked(weekStart, existing.submitted_at)) {
+    throw new Error("This timesheet is locked and can no longer be changed.");
+  }
+  await dbClearPhoto(ownerId, weekStart);
+  revalidatePath("/");
+  return { ok: true };
 }

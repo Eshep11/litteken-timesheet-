@@ -29,6 +29,7 @@ export async function GET(request) {
       data: [],
       created_at: null,
       submitted_at: null,
+      photo: null,
       locked: false,
     });
   }

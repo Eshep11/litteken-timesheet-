@@ -8,7 +8,9 @@ export default function TimesheetGrid({
   editable,
   onEmployeeChange,
   onCellChange,
+  onDuplicate,
   statusInfo,
+  photo,
 }) {
   return (
     <div className="sheet" id="printable">
@@ -80,8 +82,15 @@ export default function TimesheetGrid({
         **If a customer pays on site, the payment information must be completed.
       </div>
 
-      {/* ── Table view (desktop + print) ── */}
-      <div className="sheet-table-view">
+      {/* ── Photo timesheet: when a photo was uploaded, it IS the sheet ── */}
+      {photo ? (
+        <div className="photo-sheet">
+          <img src={photo} alt="Photo of this week's timesheet" />
+        </div>
+      ) : (
+        <>
+          {/* ── Table view (desktop + print) ── */}
+          <div className="sheet-table-view">
         <div className="grid-scroll">
           <table className="timesheet">
             <colgroup>
@@ -158,15 +167,22 @@ export default function TimesheetGrid({
         </div>
       </div>
 
-      {/* ── Card view (phones only) ── */}
-      <div className="sheet-card-view">
-        <CardList rows={rows} editable={editable} onCellChange={onCellChange} />
-      </div>
+          {/* ── Card view (phones only) ── */}
+          <div className="sheet-card-view">
+            <CardList
+              rows={rows}
+              editable={editable}
+              onCellChange={onCellChange}
+              onDuplicate={onDuplicate}
+            />
+          </div>
+        </>
+      )}
     </div>
   );
 }
 
-function CardList({ rows, editable, onCellChange }) {
+function CardList({ rows, editable, onCellChange, onDuplicate }) {
   // Show every filled entry plus one blank entry to fill next (when editing).
   // When view-only (boss), show just the filled entries.
   let lastFilled = -1;
@@ -188,11 +204,23 @@ function CardList({ rows, editable, onCellChange }) {
         <div className="entry-card" key={i}>
           <div className="entry-card-head">
             <span>Entry {i + 1}</span>
-            {(row.date || row.job) && (
-              <span className="entry-card-summary">
-                {[row.date, row.job].filter(Boolean).join(" · ")}
-              </span>
-            )}
+            <span className="entry-card-head-right">
+              {(row.date || row.job) && (
+                <span className="entry-card-summary">
+                  {[row.date, row.job].filter(Boolean).join(" · ")}
+                </span>
+              )}
+              {editable && !isRowEmpty(row) && (
+                <button
+                  type="button"
+                  className="btn btn-small btn-duplicate"
+                  onClick={() => onDuplicate(i)}
+                  title="Copy this entry to a new one with the next day's date"
+                >
+                  Duplicate
+                </button>
+              )}
+            </span>
           </div>
 
           <label className="field">

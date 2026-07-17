@@ -105,6 +105,16 @@ The app builds its own tables automatically — no SQL to write.
 **Employees:** your weeks are listed on the left (newest first). **+ New**
 starts a week, fill in the grid, **Save**. **Download / Print** makes a PDF.
 
+- **Duplicate an entry** — on a multi-day job, tap **Duplicate** on an entry
+  (or "Duplicate last entry" on desktop) to copy it into a new entry with the
+  date bumped one day forward ("7/6" → "7/7", month rollover handled). Fix up
+  anything that differs and keep going.
+- **Photo timesheets** — instead of filling out the grid, tap **"📷 Use a
+  photo instead"** and snap a picture of a paper timesheet. The photo becomes
+  your sheet for that week (it prints, submits, and locks just like a normal
+  sheet). Photos are shrunk on your phone before upload so it's quick even on
+  jobsite signal. "Remove photo" switches back to filling it out manually.
+
 **Bosses:** a **"Viewing employee"** dropdown at the top lets you pick any
 employee and review their sheets (view and print only — you can't change an
 employee's hours). Use the **Manage team** button to:
