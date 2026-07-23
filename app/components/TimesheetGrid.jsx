@@ -11,9 +11,18 @@ export default function TimesheetGrid({
   onDuplicate,
   statusInfo,
   photo,
+  contractors,
+  onSaveContractor,
 }) {
   return (
     <div className="sheet" id="printable">
+      {contractors && contractors.length > 0 && (
+        <datalist id="contractor-list">
+          {contractors.map((c) => (
+            <option key={c} value={c} />
+          ))}
+        </datalist>
+      )}
       {/* ── Letterhead ── */}
       <div className="sheet-header">
         <div className="sheet-header-left">
@@ -151,7 +160,14 @@ export default function TimesheetGrid({
               {rows.map((row, i) => (
                 <tr key={i} className={isRowEmpty(row) ? "r-blank" : undefined}>
                   <td><Cell v={row.date} ro={!editable} onChange={(x) => onCellChange(i, "date", x)} /></td>
-                  <td><Cell v={row.contractor} ro={!editable} align="left" onChange={(x) => onCellChange(i, "contractor", x)} /></td>
+                  <td>
+                    <ContractorCell
+                      v={row.contractor}
+                      ro={!editable}
+                      onChange={(x) => onCellChange(i, "contractor", x)}
+                      onSave={onSaveContractor}
+                    />
+                  </td>
                   <td><Cell v={row.job} ro={!editable} align="left" onChange={(x) => onCellChange(i, "job", x)} /></td>
                   <td><Cell v={row.reg} ro={!editable} onChange={(x) => onCellChange(i, "reg", x)} /></td>
                   <td><Cell v={row.ot} ro={!editable} onChange={(x) => onCellChange(i, "ot", x)} /></td>
@@ -231,8 +247,17 @@ function CardList({ rows, editable, onCellChange, onDuplicate }) {
 
           <label className="field">
             <span>Contractor</span>
-            <input type="text" value={row.contractor || ""} readOnly={!editable}
-              onChange={(e) => onCellChange(i, "contractor", e.target.value)} />
+            <div className="contractor-field">
+              <input type="text" list="contractor-list" value={row.contractor || ""} readOnly={!editable}
+                onChange={(e) => onCellChange(i, "contractor", e.target.value)} />
+              {editable && onSaveContractor && (row.contractor || "").trim().length >= 2 && (
+                <button type="button" className="star-save"
+                  title="Save this contractor for next time"
+                  onClick={() => onSaveContractor(row.contractor)}>
+                  ★ Save
+                </button>
+              )}
+            </div>
           </label>
 
           <label className="field">
@@ -297,14 +322,47 @@ function CardList({ rows, editable, onCellChange, onDuplicate }) {
   );
 }
 
-function Cell({ v, ro, align, onChange }) {
+function ContractorCell({ v, ro, onChange, onSave }) {
+  const val = v || "";
   return (
-    <input
-      type="text"
-      className={align === "left" ? "cell left" : "cell"}
-      value={v || ""}
-      readOnly={ro}
-      onChange={(e) => onChange(e.target.value)}
-    />
+    <div className="cell-wrap contractor-cell">
+      <input
+        type="text"
+        list="contractor-list"
+        className="cell left cell-input"
+        value={val}
+        readOnly={ro}
+        onChange={(e) => onChange(e.target.value)}
+      />
+      {!ro && onSave && val.trim().length >= 2 && (
+        <button
+          type="button"
+          className="star-save-cell no-print"
+          title="Save this contractor for next time"
+          onClick={() => onSave(val)}
+        >
+          ★
+        </button>
+      )}
+      <span className="cell-print left">{val}</span>
+    </div>
+  );
+}
+
+function Cell({ v, ro, align, onChange }) {
+  const cls = align === "left" ? "cell left" : "cell";
+  return (
+    <div className="cell-wrap">
+      <input
+        type="text"
+        className={cls + " cell-input"}
+        value={v || ""}
+        readOnly={ro}
+        onChange={(e) => onChange(e.target.value)}
+      />
+      {/* Print-only: an <input> can't wrap, so on paper we show the value as
+          wrapping text instead. Hidden on screen; the input is hidden in print. */}
+      <span className={"cell-print " + (align === "left" ? "left" : "")}>{v || ""}</span>
+    </div>
   );
 }

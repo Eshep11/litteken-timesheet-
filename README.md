@@ -109,6 +109,11 @@ starts a week, fill in the grid, **Save**. **Download / Print** makes a PDF.
   (or "Duplicate last entry" on desktop) to copy it into a new entry with the
   date bumped one day forward ("7/6" → "7/7", month rollover handled). Fix up
   anything that differs and keep going.
+- **Saved contractors** — type a contractor once, then tap **★ Save** next to
+  the field to keep it. After that, typing in the Contractor box suggests your
+  saved names so you can pick instead of retyping. The list is **yours only** —
+  it never mixes with other employees'. One-off service calls simply don't get
+  saved (just don't tap the star), so the list stays clean.
 - **Photo timesheets** — instead of filling out the grid, tap **"📷 Use a
   photo instead"** and snap a picture of a paper timesheet. The photo becomes
   your sheet for that week (it prints, submits, and locks just like a normal

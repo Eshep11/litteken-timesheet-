@@ -23,6 +23,7 @@ import {
   sendBackAction,
   savePhotoAction,
   clearPhotoAction,
+  addContractorAction,
 } from "@/app/actions";
 
 export default function TimesheetApp({
@@ -33,6 +34,7 @@ export default function TimesheetApp({
   initialWeeks,
   initialWeek,
   initialSheet,
+  initialContractors,
 }) {
   const [employeeList, setEmployeeList] = useState(employees || []);
   const [owner, setOwner] = useState({ id: ownerId, name: ownerName });
@@ -49,6 +51,7 @@ export default function TimesheetApp({
   const [createdAt, setCreatedAt] = useState(initialSheet.created_at || null);
   const [submittedAt, setSubmittedAt] = useState(initialSheet.submitted_at || null);
   const [photo, setPhoto] = useState(initialSheet.photo || null);
+  const [contractors, setContractors] = useState(initialContractors || []);
   const [dirty, setDirty] = useState(false);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
@@ -229,6 +232,28 @@ export default function TimesheetApp({
       if (!isRowEmpty(r)) last = i;
     });
     if (last >= 0) duplicateEntry(last);
+  }
+
+  // ── Save a contractor to the employee's own list (for autocomplete) ──
+  async function saveContractor(name) {
+    const clean = String(name || "").trim();
+    if (!owner.id || clean.length < 2) return;
+    // Already saved (case-insensitive)? Nothing to do.
+    if (contractors.some((c) => c.toLowerCase() === clean.toLowerCase())) {
+      setStatus("Already saved.");
+      setTimeout(() => setStatus(""), 1500);
+      return;
+    }
+    try {
+      await addContractorAction(owner.id, clean);
+      setContractors((list) =>
+        [...list, clean].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
+      );
+      setStatus(`Saved "${clean}" for next time.`);
+      setTimeout(() => setStatus(""), 2500);
+    } catch {
+      setStatus("Could not save that contractor.");
+    }
   }
 
   // ── Photo timesheet upload ──
@@ -695,6 +720,8 @@ export default function TimesheetApp({
               onDuplicate={duplicateEntry}
               statusInfo={statusInfo}
               photo={photo}
+              contractors={contractors}
+              onSaveContractor={saveContractor}
             />
           </section>
         </div>

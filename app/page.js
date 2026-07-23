@@ -1,5 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
-import { getUser, getEmployees, getWeeks, getTimesheet } from "@/lib/db";
+import { getUser, getEmployees, getWeeks, getTimesheet, getContractors } from "@/lib/db";
 import { currentMonday } from "@/lib/dates";
 import TimesheetApp from "./components/TimesheetApp";
 import AccessCodeGate from "./components/AccessCodeGate";
@@ -66,6 +66,10 @@ export default async function Page({ searchParams }) {
       };
   }
 
+  // The logged-in employee's own saved contractors (bosses are view-only
+  // and don't fill out sheets, so they don't need this).
+  const contractors = isBoss ? [] : await getContractors(me.clerk_id);
+
   return (
     <main className="app">
       <TopBar name={me.name} role={me.role} />
@@ -77,6 +81,7 @@ export default async function Page({ searchParams }) {
         initialWeeks={weeks}
         initialWeek={selected}
         initialSheet={sheet}
+        initialContractors={contractors}
       />
     </main>
   );

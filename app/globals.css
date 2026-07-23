@@ -482,6 +482,9 @@ table.timesheet tbody td {
   font-family: inherit;
   padding: 0 2px;
 }
+.cell-wrap { width: 100%; }
+/* On screen, only the input shows; the print-text span is hidden. */
+.cell-print { display: none; }
 .cell.left {
   text-align: left;
 }
@@ -588,6 +591,24 @@ col.c-pmeth {
   .cell:focus {
     background: transparent;
   }
+  /* Long values (addresses, full names, payment notes) can't wrap inside an
+     <input>, so in print we hide the input and show the value as wrapping
+     text. Cells align to the top and rows grow to fit the tallest cell, so
+     nothing is clipped. */
+  td { vertical-align: top; }
+  .cell-input { display: none; }
+  .cell-print {
+    display: block;
+    font-size: 11px;
+    line-height: 1.2;
+    padding: 1px 2px;
+    text-align: center;
+    white-space: normal;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    min-height: 20px;
+  }
+  .cell-print.left { text-align: left; }
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -1077,4 +1098,52 @@ col.c-pmeth {
      page 2 — leaving page 1 as a lonely "template" and a spill page 3. */
   .photo-sheet img { border: none; border-radius: 0; max-height: 6.8in; }
   .photo-sheet { page-break-inside: avoid; }
+}
+
+/* ═══════════════════════════════════════════════════════
+   SAVED CONTRACTORS (autocomplete + save)
+   ═══════════════════════════════════════════════════════ */
+
+/* Card view: contractor input with a Save star beside it */
+.contractor-field {
+  display: flex;
+  gap: 6px;
+  align-items: stretch;
+}
+.contractor-field input {
+  flex: 1;
+  min-width: 0;
+}
+.star-save {
+  flex: 0 0 auto;
+  border: 1px solid #f0c33c;
+  background: #fff9e6;
+  color: #926b00;
+  border-radius: 8px;
+  padding: 0 10px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  min-height: 44px;
+}
+.star-save:hover { background: #fff2cc; }
+
+/* Table view (desktop): a small star tucked into the contractor cell */
+.contractor-cell { position: relative; display: flex; align-items: center; }
+.contractor-cell .cell-input { flex: 1; }
+.star-save-cell {
+  flex: 0 0 auto;
+  border: none;
+  background: transparent;
+  color: #d0a020;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+}
+.star-save-cell:hover { color: #b8860b; }
+
+@media screen and (max-width: 800px) {
+  .star-save { font-size: 14px; padding: 0 12px; }
 }

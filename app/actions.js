@@ -11,6 +11,7 @@ import {
   unsubmitTimesheet as dbUnsubmitTimesheet,
   setPhoto as dbSetPhoto,
   clearPhoto as dbClearPhoto,
+  addContractor as dbAddContractor,
 } from "@/lib/db";
 import { isLocked, isPastDeadline } from "@/lib/lock";
 import { revalidatePath } from "next/cache";
@@ -133,5 +134,17 @@ export async function clearPhotoAction(ownerId, weekStart) {
   }
   await dbClearPhoto(ownerId, weekStart);
   revalidatePath("/");
+  return { ok: true };
+}
+
+// ── Saved contractors ──
+// An employee saves a contractor name to their own list for future
+// autocomplete. Only the owner can add to their own list.
+export async function addContractorAction(ownerId, name) {
+  await authorizeFor(ownerId);
+  const clean = String(name || "").trim();
+  if (clean.length < 2) throw new Error("Enter a contractor name first.");
+  if (clean.length > 80) throw new Error("That name is too long.");
+  await dbAddContractor(ownerId, clean);
   return { ok: true };
 }
