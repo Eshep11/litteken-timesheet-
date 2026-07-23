@@ -190,6 +190,7 @@ export default function TimesheetGrid({
               editable={editable}
               onCellChange={onCellChange}
               onDuplicate={onDuplicate}
+              onSaveContractor={onSaveContractor}
             />
           </div>
         </>
@@ -198,7 +199,7 @@ export default function TimesheetGrid({
   );
 }
 
-function CardList({ rows, editable, onCellChange, onDuplicate }) {
+function CardList({ rows, editable, onCellChange, onDuplicate, onSaveContractor }) {
   // Show every filled entry plus one blank entry to fill next (when editing).
   // When view-only (boss), show just the filled entries.
   let lastFilled = -1;
